@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposta Comercial — Fenix</title>
+<style>
+:root{--ink:#14110f;--mute:#6b625b;--line:#e6dfd8;--bg:#fbf8f5;--acc:#c2410c}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.6 Georgia,'Times New Roman',serif;color:var(--ink);background:var(--bg)}
+.page{max-width:820px;margin:0 auto;padding:64px 28px}
+.eyebrow{font:600 12px/1 system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--acc)}
+h1{font-size:clamp(34px,6vw,52px);line-height:1.08;margin:14px 0 8px;font-weight:600}
+.sub{color:var(--mute)}
+h2{font:600 13px/1 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin:48px 0 14px;padding-top:24px;border-top:1px solid var(--line)}
+p{margin:0 0 12px}
+ul{padding-left:20px;margin:0 0 12px}li{margin:4px 0}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:32px}
+.meta div{font:14px/1.5 system-ui,sans-serif}.meta b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+.bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0 6px}
+.bar i{display:block;height:100%;width:70%;background:var(--acc)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.card{border:1px solid var(--line);border-radius:10px;padding:20px;background:#fff}
+.card h3{font:600 15px system-ui,sans-serif;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font:15px system-ui,sans-serif}
+td{padding:12px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+tr.total td{border:0;font-weight:700;font-size:18px;padding-top:16px}
+.note{font:13px/1.5 system-ui,sans-serif;color:var(--mute)}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;font:14px system-ui,sans-serif}
+.sign div{border-top:1px solid var(--ink);padding-top:8px}
+@media print{body{background:#fff}.page{padding:0}h2{break-after:avoid}.card,tr{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="eyebrow">Astrovia Solutions · Proposta comercial</div>
+  <h1>Fenix — conclusão do projeto</h1>
+  <p class="sub">Finalização do processo manual e da camada de banco de dados.</p>
+
+  <div class="meta">
+    <div><b>Cliente</b>Fenix<br>CNPJ 23.011.599/0001-64</div>
+    <div><b>Fornecedor</b>Astrovia Solutions<br>CNPJ [preencher]</div>
+    <div><b>Data</b>24/11/2026</div>
+    <div><b>Investimento</b>R$ 3.000,00</div>
+  </div>
+
+  <h2>Situação atual</h2>
+  <p>O projeto está com <strong>70% de progresso</strong>. A base já entregue está em operação de desenvolvimento; restam as duas frentes que tornam o sistema utilizável no dia a dia.</p>
+  <div class="bar"><i></i></div>
+  <p class="note">70% concluído · 30% restante</p>
+
+  <h2>Escopo</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Já entregue (70%)</h3>
+      <ul>
+        <li>[listar módulos/telas já concluídos]</li>
+        <li>[…]</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>A entregar (30%)</h3>
+      <ul>
+        <li><b>Processo manual:</b> fluxo operacional para lançamentos e ajustes feitos pela equipe, com validações e histórico de alterações.</li>
+        <li><b>Banco de dados:</b> modelagem, persistência dos dados do sistema, controle de acesso por usuário (RLS) e rotina de backup.</li>
+        <li>Integração das duas frentes ao que já está pronto, testes e ajustes finais.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Investimento e pagamento</h2>
+  <table>
+    <tr><td>Valor total do projeto</td><td>R$ 3.000,00</td></tr>
+    <tr><td>Pagamento em <strong>25/11/2026</strong> — referente aos 70% concluídos</td><td>R$ 2.100,00</td></tr>
+    <tr><td>Saldo na entrega do processo manual e do banco de dados</td><td>R$ 900,00</td></tr>
+    <tr class="total"><td>Total</td><td>R$ 3.000,00</td></tr>
+  </table>
+  <p class="note" style="margin-top:12px">Formas de pagamento: Pix ou transferência. Valores sem reajuste durante a vigência desta proposta.</p>
+
+  <h2>Condições</h2>
+  <ul>
+    <li>Escopo limitado ao descrito acima; novas funcionalidades serão orçadas à parte.</li>
+    <li>Prazo de entrega: [definir] dias corridos após o pagamento do dia 25.</li>
+    <li>Revisões razoáveis dentro do escopo incluídas até a aceitação final.</li>
+    <li>Os dados do cliente permanecem de propriedade da Fenix; tratamento conforme a LGPD.</li>
+    <li>Proposta válida por 7 dias.</li>
+  </ul>
+
+  <div class="sign">
+    <div>Fenix<br>CNPJ 23.011.599/0001-64</div>
+    <div>Astrovia Solutions</div>
+  </div>
+</main>
+</body>
+</html>
