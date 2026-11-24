@@ -3,93 +3,175 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Proposta Comercial — Fenix</title>
+<title>Proposta Astrovia — Fenix</title>
 <style>
-:root{--ink:#14110f;--mute:#6b625b;--line:#e6dfd8;--bg:#fbf8f5;--acc:#c2410c}
-*{box-sizing:border-box;margin:0}
-body{font:16px/1.6 Georgia,'Times New Roman',serif;color:var(--ink);background:var(--bg)}
-.page{max-width:820px;margin:0 auto;padding:64px 28px}
-.eyebrow{font:600 12px/1 system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--acc)}
-h1{font-size:clamp(34px,6vw,52px);line-height:1.08;margin:14px 0 8px;font-weight:600}
-.sub{color:var(--mute)}
-h2{font:600 13px/1 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);margin:48px 0 14px;padding-top:24px;border-top:1px solid var(--line)}
-p{margin:0 0 12px}
-ul{padding-left:20px;margin:0 0 12px}li{margin:4px 0}
-.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:32px}
-.meta div{font:14px/1.5 system-ui,sans-serif}.meta b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
-.bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0 6px}
-.bar i{display:block;height:100%;width:70%;background:var(--acc)}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.card{border:1px solid var(--line);border-radius:10px;padding:20px;background:#fff}
-.card h3{font:600 15px system-ui,sans-serif;margin-bottom:10px}
-table{width:100%;border-collapse:collapse;font:15px system-ui,sans-serif}
-td{padding:12px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
-tr.total td{border:0;font-weight:700;font-size:18px;padding-top:16px}
-.note{font:13px/1.5 system-ui,sans-serif;color:var(--mute)}
-.sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;font:14px system-ui,sans-serif}
-.sign div{border-top:1px solid var(--ink);padding-top:8px}
-@media print{body{background:#fff}.page{padding:0}h2{break-after:avoid}.card,tr{break-inside:avoid}}
+@page{size:A4;margin:0}
+:root{--ink:#0b0b12;--mute:#5b5a6b;--pur:#4c1d95;--vio:#7c3aed;--mag:#d946ef;--red:#dc2626;--line:#e7e5ef;--tint:#efeafb}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:Inter,"Helvetica Neue",Arial,sans-serif;font-size:10.6pt;line-height:1.5;color:var(--ink);background:#d9d7e2}
+.page{width:210mm;height:297mm;margin:0 auto 12px;background:#fff;position:relative;overflow:hidden;page-break-after:always;break-after:page;padding:20mm 18mm 0}
+@media print{body{background:#fff}.page{margin:0}}
+/* capa */
+.cover{background:#0c0b14;color:#fff;padding:0}
+.cover .g1{position:absolute;left:-60mm;top:-50mm;width:170mm;height:170mm;border-radius:50%;background:radial-gradient(circle,rgba(109,40,217,.75),rgba(109,40,217,0) 65%)}
+.cover .g2{position:absolute;right:-70mm;bottom:-60mm;width:170mm;height:170mm;border-radius:50%;background:radial-gradient(circle,rgba(168,52,200,.55),rgba(168,52,200,0) 65%)}
+.cover .in{position:relative;padding:24mm 22mm}
+.brand{font-weight:800;letter-spacing:.32em;font-size:10pt;text-transform:uppercase}
+.brand b{color:var(--mag);font-weight:800}
+.cover h1{margin-top:62mm;font-size:46pt;line-height:1.02;font-weight:800;letter-spacing:-.02em}
+.cover h1 span{display:block;background:linear-gradient(90deg,#a78bfa,#e879f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bar{width:52mm;height:1.6mm;border-radius:2mm;background:linear-gradient(90deg,var(--vio),var(--mag));margin:9mm 0}
+.cover p.d{font-size:12pt;line-height:1.55;color:#d9d6ea;max-width:125mm}
+.cover .foot{position:absolute;left:22mm;right:22mm;bottom:24mm;border-top:1px solid #34324a;padding-top:10mm;display:flex;align-items:center;gap:12mm}
+.logo{width:34mm;height:34mm;border-radius:50%;border:1.2mm solid #dc2626;background:#0c0b14;display:flex;align-items:center;justify-content:center;font-size:38pt;font-weight:800;color:#fff;letter-spacing:-.04em}
+.x{color:var(--mag);font-size:16pt}
+.foot .t b{display:block;letter-spacing:.3em;font-size:12pt;margin-bottom:3mm}
+.foot .t small{display:block;font-size:8.6pt;color:#cfcbe3;line-height:1.7}
+/* internas */
+.hd{display:flex;justify-content:space-between;font-size:7.4pt;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);padding-bottom:3.2mm;position:relative}
+.hd b{color:var(--vio)}
+.hd:after{content:"";position:absolute;left:0;right:0;bottom:0;height:.9mm;background:linear-gradient(90deg,var(--pur),var(--mag) 60%,var(--red))}
+.ft{position:absolute;left:18mm;right:18mm;bottom:9mm;border-top:1px solid var(--line);padding-top:3mm;display:flex;justify-content:space-between;font-size:7.4pt;color:var(--mute)}
+h2{font-size:17pt;font-weight:800;color:var(--pur);margin:9mm 0 4mm;letter-spacing:-.01em}
+h2 i{font-style:normal;color:var(--mag);margin-right:2.5mm}
+p{margin-bottom:3mm}
+.tb{width:100%;border-collapse:collapse;font-size:9.6pt}
+.tb td,.tb th{padding:2.6mm 3mm;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tb th{background:var(--tint);color:var(--pur);font-size:7.6pt;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.tb td:first-child{background:var(--tint);color:var(--pur);font-size:7.6pt;letter-spacing:.16em;text-transform:uppercase;font-weight:700;width:30mm}
+.tb.plain td:first-child{background:none;color:var(--ink);font-size:9.6pt;letter-spacing:0;text-transform:none;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:4mm 0}
+.c{border:1px solid var(--line);border-left:1mm solid var(--red);border-radius:2mm;padding:3mm 4mm;background:#fdf7f7}
+.c.v{border-left-color:var(--mag);background:#faf8ff}
+.c b{display:block;font-size:10pt;margin-bottom:1mm}
+.c span{font-size:8.8pt;color:var(--mute);line-height:1.45;display:block}
+h4{color:var(--pur);font-size:10pt;margin:5mm 0 2mm}
+ul{padding-left:5mm;margin-bottom:3mm}li{margin:1mm 0}
+.note{border-left:1mm solid #e8b923;background:#fffbea;padding:3mm 4mm;font-size:8.6pt;color:#4a4636;border-radius:1mm;margin-top:4mm}
+.ph{background:#fff3b0;padding:0 1mm;border-radius:1mm}
+.money{border-radius:4mm;background:linear-gradient(110deg,#4c1d95,#6d28d9 55%,#d946ef);color:#fff;padding:8mm 9mm;display:flex;justify-content:space-between;align-items:center;margin:4mm 0}
+.money small{display:block;font-size:7.6pt;letter-spacing:.2em;text-transform:uppercase;opacity:.85}
+.money strong{font-size:30pt;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.money .r{text-align:right}.money .r strong{font-size:17pt}
+.cl{font-size:9.2pt;text-align:justify;margin-bottom:2.6mm;line-height:1.48}
+.cl b.n{color:var(--vio)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:3mm 0 4mm}
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:14mm;margin-top:26mm}
+.sig div{border-top:1px solid var(--ink);padding-top:2mm;font-size:9.6pt}
+.sig small{display:block;color:var(--mute);font-size:8.2pt}
 </style>
 </head>
 <body>
-<main class="page">
-  <div class="eyebrow">Astrovia Solutions · Proposta comercial</div>
-  <h1>Fenix — conclusão do projeto</h1>
-  <p class="sub">Finalização do processo manual e da camada de banco de dados.</p>
 
-  <div class="meta">
-    <div><b>Cliente</b>Fenix<br>CNPJ 23.011.599/0001-64</div>
-    <div><b>Fornecedor</b>Astrovia Solutions<br>CNPJ [preencher]</div>
-    <div><b>Data</b>24/11/2026</div>
-    <div><b>Investimento</b>R$ 3.000,00</div>
+<!-- CAPA -->
+<section class="page cover">
+  <div class="g1"></div><div class="g2"></div>
+  <div class="in">
+    <div class="brand"><b>Astrovia</b> Solutions</div>
+    <h1>Proposta<br>comercial<span>Conclusão do Sistema</span></h1>
+    <div class="bar"></div>
+    <p class="d">Finalização do sistema da Fenix: implementação do processo manual e da camada de banco de dados.</p>
   </div>
-
-  <h2>Situação atual</h2>
-  <p>O projeto está com <strong>70% de progresso</strong>. A base já entregue está em operação de desenvolvimento; restam as duas frentes que tornam o sistema utilizável no dia a dia.</p>
-  <div class="bar"><i></i></div>
-  <p class="note">70% concluído · 30% restante</p>
-
-  <h2>Escopo</h2>
-  <div class="cols">
-    <div class="card">
-      <h3>Já entregue (70%)</h3>
-      <ul>
-        <li>[listar módulos/telas já concluídos]</li>
-        <li>[…]</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3>A entregar (30%)</h3>
-      <ul>
-        <li><b>Processo manual:</b> fluxo operacional para lançamentos e ajustes feitos pela equipe, com validações e histórico de alterações.</li>
-        <li><b>Banco de dados:</b> modelagem, persistência dos dados do sistema, controle de acesso por usuário (RLS) e rotina de backup.</li>
-        <li>Integração das duas frentes ao que já está pronto, testes e ajustes finais.</li>
-      </ul>
-    </div>
+  <div class="foot">
+    <div class="logo">F</div>
+    <div class="x">×</div>
+    <div class="t"><b>ASTROVIA</b><small>Proposta emitida em 24 de novembro de 2026<br>Preparada para Fenix · CNPJ 23.011.599/0001-64</small></div>
   </div>
+</section>
 
-  <h2>Investimento e pagamento</h2>
-  <table>
-    <tr><td>Valor total do projeto</td><td>R$ 3.000,00</td></tr>
-    <tr><td>Pagamento em <strong>25/11/2026</strong> — referente aos 70% concluídos</td><td>R$ 2.100,00</td></tr>
-    <tr><td>Saldo na entrega do processo manual e do banco de dados</td><td>R$ 900,00</td></tr>
-    <tr class="total"><td>Total</td><td>R$ 3.000,00</td></tr>
+<!-- 2 -->
+<section class="page">
+  <div class="hd"><span><b>Astrovia</b> Solutions · Proposta comercial</span><span>Fenix</span></div>
+  <h2><i>01</i>Partes</h2>
+  <table class="tb">
+    <tr><td>Contratante</td><td><b>Fenix</b> · CNPJ 23.011.599/0001-64</td></tr>
+    <tr><td>Contratada</td><td><b>Astrovia Solutions</b> · representada por <b>Christian Silveira</b> · CPF 114.871.389-11</td></tr>
   </table>
-  <p class="note" style="margin-top:12px">Formas de pagamento: Pix ou transferência. Valores sem reajuste durante a vigência desta proposta.</p>
 
-  <h2>Condições</h2>
-  <ul>
-    <li>Escopo limitado ao descrito acima; novas funcionalidades serão orçadas à parte.</li>
-    <li>Prazo de entrega: [definir] dias corridos após o pagamento do dia 25.</li>
-    <li>Revisões razoáveis dentro do escopo incluídas até a aceitação final.</li>
-    <li>Os dados do cliente permanecem de propriedade da Fenix; tratamento conforme a LGPD.</li>
-    <li>Proposta válida por 7 dias.</li>
-  </ul>
-
-  <div class="sign">
-    <div>Fenix<br>CNPJ 23.011.599/0001-64</div>
-    <div>Astrovia Solutions</div>
+  <h2><i>02</i>Objeto e escopo</h2>
+  <p>Conclusão do <b>Sistema Fenix</b>, hoje com <b>70% do desenvolvimento concluído</b>. Esta proposta cobre os 30% restantes: o processo manual e o banco de dados, que colocam o sistema em operação real.</p>
+  <div class="grid">
+    <div class="c v"><b>Já desenvolvido (70%)</b><span><span class="ph">[listar módulos e telas já entregues]</span></span></div>
+    <div class="c"><b>Processo manual</b><span>Fluxo operacional para lançamentos e ajustes feitos pela equipe, com validações, conferência e histórico de alterações.</span></div>
+    <div class="c"><b>Banco de dados</b><span>Modelagem e persistência de todos os dados do sistema, substituindo o armazenamento local por dados gravados no servidor.</span></div>
+    <div class="c"><b>Integração e testes</b><span>Ligação das duas frentes ao que já está pronto, roteiro de testes e ajustes finais.</span></div>
   </div>
-</main>
+  <h4>Também incluso</h4>
+  <ul>
+    <li>Banco de dados <b>Supabase exclusivo da Fenix</b>, com <b>RLS (segurança por linha) ativado em todas as tabelas</b> e cadastro público de usuários desativado.</li>
+    <li>Autenticação por e-mail e senha, com perfis e permissões separados.</li>
+    <li>Rotina de backup dos dados.</li>
+    <li>Publicação do sistema em ambiente de produção e orientação de uso à equipe.</li>
+  </ul>
+  <div class="note">Fora do escopo, salvo orçamento à parte: novos módulos, integrações com sistemas de terceiros não previstos acima, aplicativos nativos de loja e custos de terceiros (hospedagem, banco de dados, domínio), que são de responsabilidade da Contratante conforme o plano escolhido.</div>
+  <div class="ft"><span>Astrovia Solutions</span><span>Proposta Fenix · 24/11/2026 · pág. 2</span></div>
+</section>
+
+<!-- 3 -->
+<section class="page">
+  <div class="hd"><span><b>Astrovia</b> Solutions · Proposta comercial</span><span>Fenix</span></div>
+  <h2><i>03</i>Investimento</h2>
+  <div class="money">
+    <div><small>Valor total do projeto</small><strong>R$ 3.000,00</strong></div>
+    <div class="r"><small>Data de pagamento</small><strong>25/11/2026</strong></div>
+  </div>
+  <table class="tb plain">
+    <tr><th>Parcela</th><th>Referência</th><th style="text-align:right">Valor</th></tr>
+    <tr><td>25/11/2026</td><td>Pagamento referente aos 70% já desenvolvidos</td><td style="text-align:right">R$ 2.100,00</td></tr>
+    <tr><td>Na entrega</td><td>Processo manual e banco de dados (30%)</td><td style="text-align:right">R$ 900,00</td></tr>
+  </table>
+  <p style="margin-top:4mm">Favorecido: <b>Astrovia Solutions · Christian Silveira</b>. O valor refere-se ao desenvolvimento e à entrega descritos nesta proposta.</p>
+  <table class="tb"><tr><td>Pagamento via Pix</td><td>Chave: <b>41995544340</b> · Banco <b>Inter</b> · Favorecido: Christian Silveira</td></tr></table>
+
+  <h2><i>04</i>Acompanhamento e suporte</h2>
+  <table class="tb">
+    <tr><th>Período</th><th>Condição</th></tr>
+    <tr><td style="background:none;color:var(--ink);font-size:9.6pt;letter-spacing:0;text-transform:none"><b>Meses 1 e 2</b> após a entrega</td><td><b>Gratuito.</b> Correção de erros e ajustes pontuais de uso, sem custo adicional.</td></tr>
+    <tr><td style="background:none;color:var(--ink);font-size:9.6pt;letter-spacing:0;text-transform:none"><b>A partir do mês 3</b></td><td>Ajustes e revisões sob demanda, de <b>R$ 100,00 a R$ 500,00</b> por solicitação, conforme a complexidade. O valor é informado e aprovado pela Contratante <b>antes</b> da execução.</td></tr>
+  </table>
+  <p style="margin-top:4mm">Erros de funcionamento (bugs) do que foi entregue são corrigidos durante o período gratuito. Mudanças de regra, novas telas ou novos recursos pedidos depois são tratados como ajustes e orçados conforme a tabela acima.</p>
+  <div class="note"><b>Prazo de entrega:</b> <span class="ph">[definir]</span> dias corridos após a confirmação do pagamento de 25/11/2026.</div>
+  <div class="ft"><span>Astrovia Solutions</span><span>Proposta Fenix · 24/11/2026 · pág. 3</span></div>
+</section>
+
+<!-- 4 -->
+<section class="page">
+  <div class="hd"><span><b>Astrovia</b> Solutions · Proposta comercial</span><span>Fenix</span></div>
+  <h2><i>05</i>Proteção de dados (LGPD)</h2>
+  <p class="cl">O sistema trata dados pessoais, como nome, telefone e endereço de clientes, dados de funcionários e usuários. O tratamento observa a <b>Lei nº 13.709/2018 (LGPD)</b>.</p>
+  <p class="cl"><b class="n">5.1 Papéis.</b> A <b>Fenix é a Controladora</b> e decide a finalidade do tratamento. A <b>Astrovia é Operadora</b> e atua apenas conforme as instruções documentadas da Controladora e o objeto desta proposta (art. 39). O provedor de banco de dados (Supabase) e o de hospedagem atuam como suboperadores.</p>
+  <p class="cl"><b class="n">5.2 Finalidade e minimização.</b> Os dados são usados somente para gerir a operação da Fenix. O sistema coleta apenas o necessário (art. 6º, I a III). Nenhum dado real é copiado, vendido ou usado pela Astrovia para fins próprios.</p>
+  <p class="cl"><b class="n">5.3 Medidas de segurança (art. 46).</b> Banco exclusivo da Fenix, <b>RLS ativado em todas as tabelas</b>; perfis com menor privilégio; cadastro público desativado, com usuários criados só pelo dono; chaves administrativas nunca expostas no navegador; comunicação criptografada (HTTPS/TLS).</p>
+  <p class="cl"><b class="n">5.4 Direitos dos titulares (art. 18).</b> A Controladora atende aos pedidos de acesso, correção, eliminação e portabilidade. A Astrovia auxilia tecnicamente, em prazo razoável, quando solicitada.</p>
+  <p class="cl"><b class="n">5.5 Incidentes (art. 48).</b> A Astrovia comunica a Fenix, por escrito e sem demora injustificada, qualquer incidente de segurança com dados pessoais de que tomar conhecimento. A comunicação à ANPD e aos titulares, quando exigida, é de responsabilidade da Controladora, com apoio técnico da Astrovia.</p>
+  <p class="cl"><b class="n">5.6 Acesso e confidencialidade.</b> O acesso da Astrovia a dados reais ocorre apenas para suporte, quando necessário, por pessoas obrigadas ao sigilo. O sigilo permanece após o fim da relação.</p>
+  <p class="cl"><b class="n">5.7 Transferência internacional (art. 33).</b> Provedores de nuvem podem armazenar dados fora do Brasil. A região do banco será definida com a Controladora, que ciente aceita a utilização de provedores com garantias adequadas.</p>
+  <p class="cl"><b class="n">5.8 Término.</b> Ao fim do contrato, a Astrovia elimina ou devolve os dados pessoais mantidos sob sua guarda, salvo obrigação legal de conservação (art. 16).</p>
+  <p class="cl"><b class="n">5.9 Responsabilidades da Controladora.</b> A Fenix responde pela licitude da origem dos dados que inserir, pela informação aos titulares, por manter senhas em sigilo e por conceder acesso apenas a pessoas autorizadas.</p>
+  <div class="ft"><span>Astrovia Solutions</span><span>Proposta Fenix · 24/11/2026 · pág. 4</span></div>
+</section>
+
+<!-- 5 -->
+<section class="page">
+  <div class="hd"><span><b>Astrovia</b> Solutions · Proposta comercial</span><span>Fenix</span></div>
+  <h2><i>06</i>Licença de uso do código</h2>
+  <p>A Astrovia <b>autoriza a Fenix a usar o código-fonte e o sistema entregues para operar e trabalhar em seu próprio negócio</b>, em caráter não exclusivo e intransferível, enquanto durar a relação comercial e o uso regular.</p>
+  <div class="two">
+    <div class="c v"><b>Permitido</b><span>Usar o sistema na operação da Fenix, por seus sócios e funcionários; manter cópias de segurança.</span></div>
+    <div class="c"><b>Vedado</b><span>Revender, sublicenciar, ceder, alugar, distribuir ou disponibilizar o código ou o sistema a terceiros, inclusive como produto ou serviço.</span></div>
+  </div>
+  <p>A propriedade intelectual do código, da arquitetura e dos componentes desenvolvidos permanece com a <b>Astrovia Solutions</b>, nos termos da Lei nº 9.609/1998 (Lei do Software) e da Lei nº 9.610/1998 (Direitos Autorais). A marca, o logotipo e os dados da Fenix continuam sendo exclusivamente da Fenix.</p>
+  <p>O descumprimento da vedação de revenda autoriza a Astrovia a rescindir a licença e a buscar as medidas cabíveis, inclusive reparação por perdas e danos.</p>
+
+  <h2><i>07</i>Aceite</h2>
+  <p>Ao assinar abaixo, as partes declaram estar de acordo com o escopo, o valor, o suporte, a licença de uso e as regras de proteção de dados descritos nesta proposta.</p>
+  <p style="margin-top:6mm">Curitiba/PR, 24 de novembro de 2026.</p>
+  <div class="sig">
+    <div><b>Astrovia Solutions</b><small>Christian Silveira · CPF 114.871.389-11</small></div>
+    <div><b>Fenix</b><small>CNPJ 23.011.599/0001-64<br>Nome e CPF do representante legal:</small></div>
+  </div>
+  <div class="ft"><span>Astrovia Solutions</span><span>Proposta Fenix · 24/11/2026 · pág. 5</span></div>
+</section>
 </body>
 </html>
