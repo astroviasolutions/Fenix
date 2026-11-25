@@ -45,6 +45,7 @@ create table if not exists public.motoristas (
   tipo text not null default 'pacote' check (tipo in ('pacote','fixo')),
   valor integer not null default 0 check (valor >= 0),            -- centavos por pacote, ou salário mensal se fixo
   ativo boolean not null default true,
+  por_parceiro jsonb not null default '{}',                         -- { empresa_id: centavos } valor específico por parceiro (ex.: cartão)
   user_id uuid unique references auth.users(id) on delete set null -- login do motorista (opcional)
 );
 
@@ -105,7 +106,7 @@ create table if not exists public.contagens (
   data date not null,
   motorista_id uuid not null references public.motoristas(id) on delete cascade,
   empresa_id uuid not null references public.empresas(id) on delete cascade,
-  qtd integer not null check (qtd >= 0),
+  qtd integer not null,   -- pode ser negativo (acerto/ajuste, como na aba BASE)
   unique (data, motorista_id, empresa_id)
 );
 create index if not exists contagens_data on public.contagens (data);

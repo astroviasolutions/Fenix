@@ -46,6 +46,12 @@ export const act = {
     const resto = s.contagens.filter((c) => !(c.data === data && c.motoristaId === motoristaId && c.empresaId === empresaId));
     return { ...s, contagens: qtd === null || qtd === '' || Number.isNaN(qtd) ? resto : [...resto, { id: uid(), data, motoristaId, empresaId, qtd: Math.round(qtd) }] };
   }),
+  /* vários lançamentos de uma vez: [{ data, motoristaId, empresaId, qtd }] (cola do Excel / importação da planilha) */
+  contarLote: (itens) => setState((s) => {
+    const novos = new Map(itens.map((i) => [`${i.data}|${i.motoristaId}|${i.empresaId}`, i]));
+    const resto = s.contagens.filter((c) => !novos.has(`${c.data}|${c.motoristaId}|${c.empresaId}`));
+    return { ...s, contagens: [...resto, ...[...novos.values()].map((i) => ({ id: uid(), data: i.data, motoristaId: i.motoristaId, empresaId: i.empresaId, qtd: Math.round(i.qtd) }))] };
+  }),
   conferir: (ini, empresaId, patch) => setState((s) => {
     const ex = s.conferencias.find((c) => c.ini === ini && c.empresaId === empresaId);
     return { ...s, conferencias: ex ? s.conferencias.map((c) => (c === ex ? { ...c, ...patch } : c)) : [...s.conferencias, { id: uid(), ini, empresaId, informado: null, ajuste: 0, ...patch }] };

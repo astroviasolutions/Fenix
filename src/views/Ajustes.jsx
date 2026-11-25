@@ -31,6 +31,15 @@ export default function Ajustes() {
               <label className="f" style={{ flex: '2 1 200px' }}>Nome<Texto valor={x.nome} onSave={(v) => act.upd('motoristas', x.id, { nome: v })} /></label>
               <label className="f" style={{ flex: '1 1 130px' }}>Tipo<select className="sel" value={x.tipo} onChange={(ev) => act.upd('motoristas', x.id, { tipo: ev.target.value })}><option value="pacote">Por pacote</option><option value="fixo">Fixo (mensal)</option></select></label>
               <label className="f" style={{ flex: '1 1 130px' }}>{x.tipo === 'fixo' ? 'Salário mensal' : 'Por pacote'}<Money valor={x.valor} onChange={(v) => act.upd('motoristas', x.id, { valor: v })} /></label>
+              {x.tipo !== 'fixo' && S.empresas.length > 0 && (
+                <details style={{ flexBasis: '100%' }}>
+                  <summary className="small muted" style={{ cursor: 'pointer' }}>Valor diferente por parceiro {Object.values(x.porParceiro || {}).some((v) => v > 0) ? `(${Object.values(x.porParceiro).filter((v) => v > 0).length} definido(s))` : '(opcional)'}</summary>
+                  <div className="form" style={{ marginTop: 8 }}>
+                    {S.empresas.map((e) => <label className="f" key={e.id} style={{ flex: '1 1 140px' }}>{e.nome}<Money valor={x.porParceiro?.[e.id] || 0} placeholder={brl(x.valor || S.ajustes.valorPadrao || 0)} onChange={(v) => act.upd('motoristas', x.id, { porParceiro: { ...(x.porParceiro || {}), [e.id]: v } })} /></label>)}
+                  </div>
+                  <p className="small muted">Em branco = vale o valor por pacote do motorista. Ex.: cartão a R$ 1,20 mesmo para quem ganha R$ 1,80.</p>
+                </details>
+              )}
               <button className="btn sm danger" onClick={() => window.confirm(`Remover ${x.nome}? As paradas dele ficam sem motorista.`) && (act.del('motoristas', x.id), S.paradas.filter((p) => p.motoristaId === x.id).forEach((p) => act.upd('paradas', p.id, { motoristaId: null })))} aria-label={`Remover ${x.nome}`}><Icon n="x" size={14} /></button>
             </div>
           ))}

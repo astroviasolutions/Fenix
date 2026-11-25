@@ -120,6 +120,8 @@ export const CATEGORIAS_BASE = ['Repasse de parceira', 'Combustível', 'Manuten�
 export const CAT_COMISSAO = 'Comissão de motorista';
 
 export const valorMotorista = (S, m) => (m.valor > 0 ? m.valor : S.ajustes.valorPadrao || 0);
+/* quanto o motorista recebe por pacote DE UM PARCEIRO: valor específico (ex.: cartão a R$ 1,20) ou o valor dele */
+export const valorPacote = (S, m, empresaId) => (m.porParceiro?.[empresaId] > 0 ? m.porParceiro[empresaId] : valorMotorista(S, m));
 
 /* Pacotes por dia × motorista × parceiro.
    O que o dono lança à mão (aba Contagem) vale mais; sem lançamento, vale o que foi bipado/baixado pelo motorista.
@@ -147,12 +149,13 @@ export function pacotesPeriodo(S, { ini, fim, empresaId = '', motoristaId = '' }
 
 export function agregarPacotes(S, filtros) {
   const emp = new Map(S.empresas.map((e) => [e.id, e]));
-  const o = { total: 0, receita: 0, semTarifa: false, porMotorista: {}, porEmpresa: {}, porDia: {}, divergencias: [] };
+  const o = { total: 0, receita: 0, semTarifa: false, porMotorista: {}, porEmpresa: {}, porMotEmp: {}, porDia: {}, divergencias: [] };
   for (const x of pacotesPeriodo(S, filtros)) {
     if (!x.qtd) continue;
     o.total += x.qtd;
     if (x.motoristaId) o.porMotorista[x.motoristaId] = (o.porMotorista[x.motoristaId] || 0) + x.qtd;
     o.porEmpresa[x.empresaId] = (o.porEmpresa[x.empresaId] || 0) + x.qtd;
+    if (x.motoristaId) { const pm = (o.porMotEmp[x.motoristaId] ||= {}); pm[x.empresaId] = (pm[x.empresaId] || 0) + x.qtd; }
     o.porDia[x.data] = (o.porDia[x.data] || 0) + x.qtd;
     const e = emp.get(x.empresaId);
     if (e?.tarifa > 0) o.receita += x.qtd * e.tarifa; else o.semTarifa = true;
@@ -200,10 +203,11 @@ export function metricas(S, { ini, fim, empresaId = '', motoristaId = '' }) {
 /* Quanto custa cada motorista no período (por pacote, ou salário fixo proporcional aos dias). */
 export function custoMotoristas(S, ini, fim, porMotorista, soMotorista = '') {
   const dias = Math.min(diasEntre(ini, fim) + 1, 30);
+  const mapa = agregarPacotes(S, { ini, fim }).porMotEmp;
   const por = {}; let total = 0;
   for (const m of S.motoristas) {
     if (soMotorista && m.id !== soMotorista) continue;
-    const v = m.tipo === 'fixo' ? Math.round((m.valor * dias) / 30) : (porMotorista[m.id]?.entregues || 0) * valorMotorista(S, m);
+    const v = m.tipo === 'fixo' ? Math.round((m.valor * dias) / 30) : Object.entries(mapa[m.id] || {}).reduce((t, [e, q]) => t + q * valorPacote(S, m, e), 0);
     if (v > 0) { por[m.id] = v; total += v; }
   }
   return { por, total };
@@ -214,7 +218,8 @@ export function acertoQuinzena(S, m, q) {
   const dados = metricas(S, { ini: q.ini, fim: q.fim, motoristaId: m.id });
   const operou = S.romaneios.some((r) => r.data >= q.ini && r.data <= q.fim) || (S.contagens || []).some((c) => c.data >= q.ini && c.data <= q.fim);
   const pacotes = dados.entregues;
-  const bruto = m.tipo === 'fixo' ? (operou ? Math.round(m.valor / 2) : 0) : pacotes * valorMotorista(S, m);
+  const porEmp = agregarPacotes(S, { ini: q.ini, fim: q.fim, motoristaId: m.id }).porEmpresa;
+  const bruto = m.tipo === 'fixo' ? (operou ? Math.round(m.valor / 2) : 0) : Object.entries(porEmp).reduce((t, [e, qtd]) => t + qtd * valorPacote(S, m, e), 0);
   const reg = S.acertos.find((a) => a.motoristaId === m.id && a.ini === q.ini);
   const descontos = reg?.descontos || [];
   const totalDesc = descontos.reduce((s, d) => s + d.valor, 0);

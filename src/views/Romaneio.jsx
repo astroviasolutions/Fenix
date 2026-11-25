@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { acharCasadas } from '../casadas.js';
 import { cidadeCanon, CIDADES_PR, ROTULOS, unificarCidades } from '../leitor/campos.js';
 import { lerArquivo } from '../leitor/index.js';
+import { lerPlanilha } from '../leitor/planilha.js';
+import { matrizDoTexto } from '../controle.js';
 import { dataBR, hoje, norm, num, STATUS } from '../lib.js';
 import { act, useStore } from '../store.js';
 import { Chips, Icon, Modal, Vazio } from '../ui.jsx';
@@ -68,6 +70,16 @@ export default function Romaneio() {
       setAlvo(m);
     } catch (e) { setErro(e.message || 'Não consegui ler esse arquivo.'); }
     setBusy(false);
+  }
+  const [colado, setColado] = useState('');
+  function lerColado() {
+    setErro(''); setLeitura(null); setResp(null); setCidadePad('');
+    const linhas = matrizDoTexto(colado);
+    const r = lerPlanilha(linhas);
+    if (!r || !r.registros.some((x) => x.codigo)) return setErro('Não achei a coluna de código nesse texto. Copie também a linha de cabeçalho (nomes das colunas).');
+    const rep = (mapa) => { const x = lerPlanilha(linhas, mapa); return { ...x, fonte: 'planilha', formato: 'texto', lidos: x.registros.length, esperado: null, avisos: [] }; };
+    setLeitura({ ...r, fonte: 'planilha', formato: 'texto', lidos: r.registros.length, esperado: null, avisos: [], arquivo: 'texto colado', reprocessar: rep });
+    setAlvo({}); setMot('');
   }
   const remapear = (indice, campo) => {
     const mapa = {};
@@ -145,7 +157,7 @@ export default function Romaneio() {
           </div>
         ) : (
           <div className="stack">
-            <Chips valor={aba} onChange={setAba} opcoes={[['arquivo', 'Importar arquivo'], ['mao', 'Lançar à mão']]} />
+            <Chips valor={aba} onChange={setAba} opcoes={[['arquivo', 'Importar arquivo'], ['colar', 'Colar da planilha'], ['mao', 'Lançar à mão']]} />
             <div className="form">
               <label className="f">Parceiro<select className="sel" value={emp} onChange={(e) => setPadrao(e.target.value)}>{S.empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}</select></label>
               <label className="f">Data da rota<input className="inp" type="date" value={data} onChange={(e) => setData(e.target.value)} /></label>
@@ -157,6 +169,13 @@ export default function Romaneio() {
                 onDrop={(e) => { e.preventDefault(); setArrastando(false); receber(e.dataTransfer.files[0]); }}>
                 <Icon n="upload" size={30} /><p><b>{busy ? 'Lendo o arquivo…' : 'Solte o arquivo aqui ou toque para escolher'}</b></p><p className="small muted">.pdf, .xlsx, .xls ou .csv</p>
                 <input ref={inp} type="file" accept=".pdf,.xlsx,.xls,.csv" hidden onChange={(e) => { receber(e.target.files[0]); e.target.value = ''; }} />
+              </div>
+            ) : aba === 'colar' ? (
+              <div className="stack">
+                <label className="f">Cole aqui o que você copiou da planilha do parceiro (com a linha de cabeçalho)
+                  <textarea className="inp" rows={7} value={colado} onChange={(e) => setColado(e.target.value)} placeholder="Código&#9;Destinatário&#9;Endereço&#9;Bairro…" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13 }} />
+                </label>
+                <div className="row"><button className="btn ac" disabled={!colado.trim()} onClick={lerColado}>Conferir</button><span className="small muted">Funciona com o que vem do Excel, Google Planilhas ou do site do parceiro.</span></div>
               </div>
             ) : (
               <div className="stack">
