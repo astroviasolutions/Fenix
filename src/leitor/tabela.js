@@ -1,4 +1,4 @@
-import { campoDoRotulo, campoPeloConteudo, cepFmt, cidadeFmt, desmembraEndereco, limpa, norm, pesoNum, telFmt } from './campos.js';
+import { campoDoRotulo, campoPeloConteudo, cepFmt, cidadeCanon, desmembraEndereco, limpa, norm, pesoNum, telFmt, tituloBR } from './campos.js';
 import { agruparLinhas, juntaTexto } from './pdf.js';
 
 /*
@@ -146,7 +146,11 @@ export function finaliza(r) {
   delete o.numero;
   if (o.cep) o.cep = cepFmt(o.cep) || o.cep;
   if (o.telefone) o.telefone = telFmt(o.telefone) || '';
-  if (o.cidade) o.cidade = cidadeFmt(o.cidade);
+  if (o.cidade) { const c = cidadeCanon(o.cidade); o.cidade = c.cidade; if (c.uf) o.uf = c.uf; }
+  if (o.endereco) o.endereco = tituloBR(o.endereco, { endereco: true }).replace(/(\s*,)+\s*$/, '').replace(/,(\s*,)+/g, ',');
+  if (o.bairro) o.bairro = tituloBR(o.bairro);
+  if (o.cliente) o.cliente = tituloBR(o.cliente);
+  if (o.remetente) o.remetente = tituloBR(o.remetente);
   if (o.peso) o.peso = pesoNum(o.peso);
   return o;
 }

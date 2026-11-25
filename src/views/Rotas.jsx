@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { acharCasadas } from '../casadas.js';
 import { agruparRotas, dividir } from '../distribuir.js';
 import { dataBR, num } from '../lib.js';
 import { act, useStore } from '../store.js';
@@ -24,6 +25,9 @@ export default function Rotas() {
     return r && p.status === 'pendente' && (todas || !p.motoristaId) && (!data || r.data === data) && (!empresaId || r.empresaId === empresaId);
   }), [S.paradas, rom, data, empresaId, todas]);
   const rotas = useMemo(() => agruparRotas(paradas), [paradas]);
+  const comEmp = (p) => ({ id: p.id, empresaId: rom.get(p.romaneioId)?.empresaId, endereco: p.endereco, cliente: p.cliente, pacotes: p.pacotes });
+  const casadas = useMemo(() => acharCasadas(paradas.map(comEmp), S.paradas.filter((p) => p.status === 'pendente').map(comEmp)), [paradas, S.paradas, rom]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nomeEmp = (id) => S.empresas.find((e) => e.id === id)?.nome || 'outro parceiro';
   const cidades = useMemo(() => [...new Set(rotas.map((r) => r.cidade))], [rotas]);
   const mot = (id) => S.motoristas.find((m) => m.id === id);
   const totalPac = rotas.reduce((t, r) => t + r.pacotes, 0);
@@ -109,7 +113,7 @@ export default function Rotas() {
                   <div className="row between" style={{ gap: 10, flexWrap: 'wrap' }}>
                     <label className="row" style={{ gap: 10, cursor: 'pointer', flex: '1 1 220px' }}>
                       <input type="checkbox" checked={sel.has(r.key)} onChange={() => alterna(sel, setSel, r.key)} aria-label={`Marcar ${r.bairro}`} />
-                      <span><b>{r.bairro}</b><span className="muted small" style={{ display: 'block' }}>{r.paradas.length} parada(s) · {r.pacotes} pacote(s)</span></span>
+                      <span><b>{r.bairro}</b><span className="muted small" style={{ display: 'block' }}>{r.paradas.length} parada(s) · {r.pacotes} pacote(s){r.paradas.some((p) => casadas.has(p.id)) && ` · 🔗 ${r.paradas.filter((p) => casadas.has(p.id)).length} com outro parceiro`}</span></span>
                     </label>
                     <span className={`tag ${d === '' ? 'warn' : 'ok'}`}>{d === '' ? 'Sem motorista' : d === 'misto' ? 'Vários motoristas' : primeiroNome(mot(d)?.nome || '?')}</span>
                     <button className="btn sm" onClick={() => alterna(aberta, setAberta, r.key)} aria-expanded={aberto}>{aberto ? 'Fechar' : 'Abrir'} <Icon n="down" size={14} /></button>
@@ -120,7 +124,7 @@ export default function Rotas() {
                   {aberto && (
                     <div className="tbl-wrap" style={{ marginTop: 10 }}><table className="tbl"><thead><tr><th>Endereço</th><th>Destinatário</th><th>Pacotes</th><th>Motorista</th></tr></thead><tbody>
                       {[...r.paradas].sort((a, b) => a.endereco.localeCompare(b.endereco, 'pt', { numeric: true })).map((p) => (
-                        <tr key={p.id}><td>{p.endereco}</td><td className="muted small">{p.cliente || '—'}</td>
+                        <tr key={p.id}><td>{p.endereco}{casadas.get(p.id)?.map((o, i) => <span key={i} className={`tag ${o.mesmoCliente ? 'ok' : 'warn'}`} style={{ marginLeft: 6 }} title={`${o.cliente || ''} · ${o.pacotes.join(', ')}`}>🔗 {nomeEmp(o.empresaId)}</span>)}</td><td className="muted small">{p.cliente || '—'}</td>
                           <td className="small">{p.pacotes.map((c) => <div key={c}>{c}</div>)}</td>
                           <td><select className="sel" style={{ minWidth: 130 }} value={p.motoristaId || ''} onChange={(e) => act.atribuir([p.id], e.target.value || null)} aria-label={`Motorista de ${p.endereco}`}><option value="">Sem motorista</option>{ativos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></td></tr>
                       ))}

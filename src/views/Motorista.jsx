@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { acertoQuinzena, brl, dataBR, hoje, num, OCORRENCIAS, quinzena, quinzenaAnterior, STATUS } from '../lib.js';
 import { act, useStore } from '../store.js';
 import { Chips, Icon, Modal, Vazio } from '../ui.jsx';
+import { acharCasadas } from '../casadas.js';
 import Bipar from './Bipar.jsx';
 
 function posicao() {
@@ -31,6 +32,12 @@ export default function Motorista({ modo = 'dono', motoristaId }) {
     const pac = (l) => l.reduce((t, p) => t + p.pacotes.length, 0);
     return { pend, feitas, porCidade, totalPac: pac(meus), entPac: pac(meus.filter((p) => p.status === 'entregue')) };
   }, [S.paradas, id, h]);
+
+  const casadas = useMemo(() => {
+    const emp = (p) => ({ id: p.id, empresaId: S.romaneios.find((r) => r.id === p.romaneioId)?.empresaId, endereco: p.endereco, cliente: p.cliente, pacotes: p.pacotes });
+    return acharCasadas(dados.pend.map(emp), S.paradas.filter((p) => p.status === 'pendente').map(emp));
+  }, [dados.pend, S.paradas, S.romaneios]);
+  const nomeEmp = (eid) => S.empresas.find((e) => e.id === eid)?.nome || 'outro parceiro';
 
   async function baixar(p, status) {
     const g = await posicao();
@@ -65,6 +72,7 @@ export default function Motorista({ modo = 'dono', motoristaId }) {
                 <div className="stop" key={p.id}>
                   <b>{p.endereco}</b>
                   <span className="muted small">{[p.bairro, p.cliente].filter(Boolean).join(' · ')} · {p.pacotes.length} pacote(s)</span>
+                  {casadas.get(p.id)?.map((o, i) => <span key={i} className="tag warn" style={{ marginTop: 6 }}>🔗 Neste endereço também: {nomeEmp(o.empresaId)} · {o.pacotes.length} pacote(s)</span>)}
                   <div className="row" style={{ marginTop: 10 }}>
                     <button className="btn ac sm" onClick={() => baixar(p, 'entregue')}><Icon n="check" size={16} /> Entregue</button>
                     <button className="btn sm" onClick={() => setOcor(p)}>Ocorrência</button>

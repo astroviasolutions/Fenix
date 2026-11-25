@@ -53,12 +53,6 @@ export function campoDoRotulo(rotulo) {
 export const cepFmt = (v) => { const m = String(v ?? '').match(/(\d{5})-?(\d{3})/); return m ? `${m[1]}-${m[2]}` : ''; };
 export const telFmt = (v) => { const d = String(v ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''); return d.length >= 10 ? d : ''; };
 export const pesoNum = (v) => { const n = parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
-/* "Castro/RP" (erro do parceiro) → "Castro/PR" */
-export function cidadeFmt(v) {
-  let s = limpa(v);
-  s = s.replace(/\/\s*RP$/i, '/PR');
-  return s;
-}
 const UFS = /^(parana|santa catarina|sao paulo|rio grande do sul|minas gerais|rio de janeiro|[a-z]{2})$/;
 /* Endereço no formato "Paraná,Palmeira,Centro,rua x 164 casa,84130-000" → separa estado/cidade/bairro/rua. */
 export function desmembraEndereco(txt) {
@@ -86,4 +80,66 @@ export function campoPeloConteudo(valores) {
   if (new Set(v).size === v.length && frac(/^[A-Za-z0-9-]{8,}$/) >= 0.8 && frac(/\d/) >= 0.8) return 'codigo';
   if (frac(/^[A-Za-zÀ-ÿ.' ]{3,60}$/) >= 0.8 && v.every((x) => x.split(' ').length <= 6)) return 'cliente';
   return null;
+}
+
+/* ---------- grafia correta ---------- */
+const PARTICULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos', 'a', 'o', 'com']);
+const ROMANOS = new Set(['ii', 'iii', 'iv', 'vi', 'vii', 'viii', 'ix', 'xi', 'xii', 'xiii']);
+const ABREV = [[/^r\.?(?=\s)/i, 'Rua'], [/^av\.?(?=\s)/i, 'Avenida'], [/^tv\.?(?=\s)/i, 'Travessa'], [/^al\.?(?=\s)/i, 'Alameda'], [/^p[cç]a\.?(?=\s)/i, 'Praça'], [/^rod\.?(?=\s)/i, 'Rodovia'], [/^estr\.?(?=\s)/i, 'Estrada']];
+
+/* "RUA DOUTOR JORGE XAVIER DA SILVA" / "rua doutor jorge" → "Rua Doutor Jorge Xavier da Silva".
+   Texto que já vem misturado (maiúsculas e minúsculas) é respeitado. */
+export function tituloBR(s, { endereco = false } = {}) {
+  let t = limpa(s);
+  if (!t) return t;
+  const letras = t.replace(/[^A-Za-zÀ-ÿ]/g, '');
+  const misturado = letras && letras !== letras.toUpperCase() && letras !== letras.toLowerCase();
+  if (endereco) for (const [rx, nome] of ABREV) if (rx.test(t)) { t = t.replace(rx, nome); break; }
+  /* já misturado ("Rua Treze De Maio", "Dom Pedro Ii"): só acerta partículas e algarismos romanos */
+  if (misturado) return t.replace(/[^\s/(),.-]+/g, (w, i) => (i > 0 && PARTICULAS.has(w.toLowerCase()) ? w.toLowerCase() : ROMANOS.has(w.toLowerCase()) ? w.toUpperCase() : w));
+  return t.toLowerCase().replace(/[^\s/(),.-]+/g, (w, i) => {
+    if (i > 0 && PARTICULAS.has(w)) return w;
+    if (ROMANOS.has(w)) return w.toUpperCase();
+    if (/^[a-z]\/[a-z]$/.test(w)) return w.toUpperCase(); // S/N
+    return w.replace(/(^|['’])([a-zà-ÿ])/g, (_, p, c) => p + c.toUpperCase());
+  });
+}
+
+/* Grafia certa (com acento) das cidades da região; as que já existem no sistema entram na frente. */
+export const CIDADES_PR = ['Castro', 'Carambeí', 'Piraí do Sul', 'Palmeira', 'Ponta Grossa', 'Tibagi', 'Arapoti', 'Jaguariaíva', 'Ipiranga', 'Telêmaco Borba', 'Ortigueira', 'Imbaú', 'Sengés', 'Reserva', 'Curitiba', 'São José dos Pinhais', 'Araucária', 'Londrina', 'Maringá', 'Cascavel', 'Guarapuava', 'Paranaguá', 'Foz do Iguaçu', 'Campo Largo', 'Colombo', 'Pinhais', 'Fazenda Rio Grande', 'Lapa', 'Contenda', 'Quitandinha'];
+
+const UF_VALIDAS = new Set('ac al ap am ba ce df es go ma mt ms mg pa pb pr pe pi rj rn rs ro rr sc sp se to rp'.split(' '));
+const lev = (a, b) => {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+};
+
+/* "castro", "CASTRO", "Castro-PR", "Castro/PR", "Castro - Pr" → { cidade: 'Castro', uf: 'PR' }.
+   `conhecidas`: grafias já usadas no sistema; a grafia certa é a mais completa/acentuada entre elas. */
+export function cidadeCanon(txt, conhecidasExtra = []) {
+  const conhecidas = [...conhecidasExtra, ...CIDADES_PR];
+  let t = limpa(txt);
+  if (!t) return { cidade: '', uf: '' };
+  let uf = '';
+  const m = t.match(/^(.*?\S)\s*[\s/,\-–(]+\s*([A-Za-z]{2})\)?$/);
+  if (m && UF_VALIDAS.has(m[2].toLowerCase())) { t = m[1]; uf = m[2].toUpperCase() === 'RP' ? 'PR' : m[2].toUpperCase(); } // "RP" é erro de digitação de PR
+  const nome = tituloBR(t);
+  const k = norm(nome);
+  const igual = conhecidas.find((c) => norm(c) === k);
+  if (igual) return { cidade: igual, uf };
+  if (k.length >= 6) {
+    const perto = conhecidas.find((c) => norm(c)[0] === k[0] && Math.abs(norm(c).length - k.length) <= 1 && lev(norm(c), k) === 1);
+    if (perto) return { cidade: perto, uf };
+  }
+  return { cidade: nome, uf };
+}
+
+/* Unifica a grafia das cidades de uma lista de registros (e das já cadastradas): a forma mais frequente/acentuada vence. */
+export function unificarCidades(registros, jaUsadas = []) {
+  const cont = new Map();
+  for (const r of registros) { const c = cidadeCanon(r.cidade).cidade; if (c) cont.set(c, (cont.get(c) || 0) + 1); }
+  const ordem = [...new Set([...jaUsadas.map((c) => cidadeCanon(c).cidade),  ...[...cont.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0])])].filter(Boolean);
+  return registros.map((r) => { if (!r.cidade) return r; const { cidade, uf } = cidadeCanon(r.cidade, ordem); return { ...r, cidade, uf: uf || r.uf || '' }; });
 }

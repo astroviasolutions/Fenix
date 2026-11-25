@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { ROTULOS } from '../leitor/campos.js';
+import { acharCasadas } from '../casadas.js';
+import { cidadeCanon, CIDADES_PR, ROTULOS, unificarCidades } from '../leitor/campos.js';
 import { lerArquivo } from '../leitor/index.js';
 import { dataBR, hoje, norm, num } from '../lib.js';
 import { act, useStore } from '../store.js';
@@ -43,12 +44,13 @@ export default function Romaneio() {
   const [arrastando, setArrastando] = useState(false);
   const [novaEmp, setNovaEmp] = useState('');
   const [aba, setAba] = useState('arquivo');
+  const [cidadePad, setCidadePad] = useState('');
   const [resp, setResp] = useState(null);       // resposta sobre o motorista do documento: 'doc' | 'outro' | 'depois'
   const inp = useRef(null);
   const emp = padrao || S.empresas[0]?.id || '';
 
   async function receber(file) {
-    setErro(''); setLeitura(null); setResp(null);
+    setErro(''); setLeitura(null); setResp(null); setCidadePad('');
     if (!file) return;
     setBusy(true);
     try {
@@ -79,13 +81,33 @@ export default function Romaneio() {
   const resumo = useMemo(() => {
     if (!leitura) return null;
     const porEmp = new Map();
-    for (const r of leitura.registros) {
+    /* mesma cidade escrita de jeitos diferentes (Castro, castro, Castro-PR) vira uma grafia só, alinhada ao que já existe no sistema */
+    const conhecidas = S.paradas.map((p) => p.cidade).filter(Boolean);
+    let registros = unificarCidades(leitura.registros, conhecidas);
+    /* arquivo sem cidade (ex.: Total): usa a escolhida; senão a única cidade do próprio arquivo; senão a mais usada no sistema */
+    const doArquivo = [...new Set(registros.map((r) => r.cidade).filter(Boolean))];
+    const freq = {}; conhecidas.forEach((c) => (freq[c] = (freq[c] || 0) + 1));
+    const maisUsada = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    const fallback = cidadeCanon(cidadePad, conhecidas).cidade || (doArquivo.length === 1 ? doArquivo[0] : '') || maisUsada;
+    registros = registros.map((r) => (r.cidade ? r : { ...r, cidade: fallback }));
+    for (const r of registros) {
       const e = (dividido && alvo[chaveServico(r)]) || emp;
       (porEmp.get(e) || porEmp.set(e, []).get(e)).push(r);
     }
     const grupos = [...porEmp.entries()].map(([empresaId, regs]) => ({ empresaId, ...agrupar(regs, jaTem) }));
     return { grupos, pacotes: grupos.reduce((t, g) => t + g.pacotes, 0), paradas: grupos.reduce((t, g) => t + g.paradas.length, 0), repetidos: grupos.reduce((t, g) => t + g.repetidos, 0) };
-  }, [leitura, alvo, emp, jaTem, dividido]);
+  }, [leitura, alvo, emp, jaTem, dividido, S.paradas, cidadePad]);
+  const semCidade = leitura ? leitura.registros.filter((r) => !r.cidade).length : 0;
+
+  /* destinatários que já têm entrega pendente de OUTRO parceiro */
+  const casadas = useMemo(() => {
+    if (!resumo) return [];
+    const alvos = resumo.grupos.flatMap((g, gi) => g.paradas.map((p, pi) => ({ id: `${gi}-${pi}`, empresaId: g.empresaId, endereco: p.endereco, cliente: p.cliente, pacotes: p.pacotes })));
+    const base = S.paradas.filter((p) => p.status === 'pendente').map((p) => ({ id: p.id, empresaId: S.romaneios.find((r) => r.id === p.romaneioId)?.empresaId, endereco: p.endereco, cliente: p.cliente, pacotes: p.pacotes }));
+    const m = acharCasadas(alvos, base);
+    return alvos.filter((a) => m.has(a.id)).map((a) => ({ ...a, outros: m.get(a.id) }));
+  }, [resumo, S.paradas, S.romaneios]);
+  const nomeEmp = (id) => S.empresas.find((e) => e.id === id)?.nome || 'outro parceiro';
 
   const docNome = leitura?.motoristaDoc ? leitura.motoristaDoc.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()) : '';
   const docId = leitura?.motoristaDoc ? acharMotorista(S, leitura.motoristaDoc) : '';
@@ -102,7 +124,7 @@ export default function Romaneio() {
   const [m, setM] = useState({ codigo: '', endereco: '', bairro: '', cidade: '', cliente: '', motoristaId: '' });
   const [ok, setOk] = useState('');
   const lancar = () => {
-    act.importar({ data, arquivo: 'lançamento manual', motoristaId: m.motoristaId || null, grupos: [{ empresaId: emp, paradas: [{ endereco: m.endereco.trim(), bairro: m.bairro.trim(), cidade: m.cidade.trim(), cliente: m.cliente.trim(), pacotes: [m.codigo.trim() || `MANUAL-${Date.now().toString(36)}`], gps: null }] }] });
+    act.importar({ data, arquivo: 'lançamento manual', motoristaId: m.motoristaId || null, grupos: [{ empresaId: emp, paradas: [{ endereco: m.endereco.trim(), bairro: m.bairro.trim(), cidade: cidadeCanon(m.cidade).cidade, cliente: m.cliente.trim(), pacotes: [m.codigo.trim() || `MANUAL-${Date.now().toString(36)}`], gps: null }] }] });
     setM({ ...m, codigo: '', endereco: '', cliente: '' }); setOk('Parada lançada.'); setTimeout(() => setOk(''), 2500);
   };
 
@@ -163,6 +185,23 @@ export default function Romaneio() {
             <div><div className="k-v">{leitura.registros.filter((r) => !r.endereco || !r.codigo).length}</div><div className="k-s">sem código ou endereço (ignorados)</div></div>
           </div>
           {leitura.avisos?.map((a) => <p key={a} className="small warn" style={{ marginTop: 10 }}>⚠ {a}</p>)}
+          {semCidade > 0 && (
+            <label className="f" style={{ marginTop: 10, maxWidth: 360 }}>Cidade ({semCidade} pacote(s) sem cidade no arquivo)
+              <input className="inp" list="cidades-pr" value={cidadePad} onChange={(e) => setCidadePad(e.target.value)} placeholder="Ex.: Castro" />
+              <datalist id="cidades-pr">{CIDADES_PR.map((c) => <option key={c} value={c} />)}</datalist>
+            </label>
+          )}
+          {casadas.length > 0 && (
+            <details style={{ marginTop: 10 }} open>
+              <summary style={{ cursor: 'pointer' }}><b>🔗 {casadas.length} endereço(s) já têm entrega de outro parceiro</b> <span className="muted small">· o motorista leva junto na mesma parada</span></summary>
+              <div className="list small">{casadas.slice(0, 10).map((c) => (
+                <div className="item" key={c.id} style={{ padding: '8px 2px' }}>
+                  <span><b>{c.cliente || 'Sem nome'}</b> · {c.endereco}</span>
+                  <span>{c.outros.map((o, i) => <span key={i} className={`tag ${o.mesmoCliente ? 'ok' : 'warn'}`} style={{ marginLeft: 6 }}>{nomeEmp(o.empresaId)} · {o.mesmoCliente ? 'mesmo cliente' : 'mesmo endereço'}</span>)}</span>
+                </div>
+              ))}{casadas.length > 10 && <p className="muted">e mais {casadas.length - 10}…</p>}</div>
+            </details>
+          )}
 
           {leitura.motoristaDoc ? (
             <div className="card" style={{ background: 'var(--surface2)', marginTop: 14, padding: 16 }}>
