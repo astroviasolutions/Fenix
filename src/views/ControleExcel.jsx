@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { tituloBR } from '../leitor/campos.js';
 import { classificar, exportarControle, lerBlocoColado, matrizDoTexto } from '../controle.js';
 import { acertoQuinzena, agregarPacotes, brl, dataBR, norm, num, quinzena, uid } from '../lib.js';
 import { act, getState, useStore } from '../store.js';
@@ -65,7 +66,7 @@ export function ImportarPlanilha({ aberto, fechar, arquivoInicial }) {
       let mid = getState().motoristas.find((m) => norm(m.nome) === norm(a.nome))?.id;
       const porParceiro = {};
       for (const [pn, t] of Object.entries(a.taxas)) if (a.taxa && Math.abs(t - a.taxa) > 1e-9) porParceiro[ensureEmp(pn)] = Math.round(t * 100);
-      if (!mid) mid = act.add('motoristas', { nome: a.nome.replace(/\s+/g, ' ').trim().replace(/(^|\s)\S/g, (c) => c.toUpperCase()), tipo: 'pacote', valor: Math.round((a.taxa || 0) * 100), porParceiro, ativo: true });
+      if (!mid) mid = act.add('motoristas', { nome: tituloBR(a.nome.replace(/\s+/g, ' ').trim()), tipo: 'pacote', valor: Math.round((a.taxa || 0) * 100), porParceiro, ativo: true });
       else { const m = getState().motoristas.find((x) => x.id === mid); act.upd('motoristas', mid, { porParceiro: { ...(m.porParceiro || {}), ...porParceiro }, valor: m.valor || Math.round((a.taxa || 0) * 100) }); }
       ids[a.nome] = mid;
       for (const l of a.lancamentos) itens.push({ data: l.data, motoristaId: mid, empresaId: ensureEmp(l.parceiro), qtd: l.qtd });
