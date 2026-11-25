@@ -53,6 +53,16 @@ export const act = {
   ajustes: (patch) => setState((s) => ({ ...s, ajustes: { ...s.ajustes, ...patch } })),
 
   baixar: (id, status, gps) => act.upd('paradas', id, { status, baixaEm: new Date().toISOString(), gps: gps || null }),
+  /* baixa em lote: [{ id, status }] (ou ids + um status) */
+  baixarLote: (itens) => setState((s) => {
+    const m = new Map(itens.map((i) => [i.id, i.status])); const agora = new Date().toISOString();
+    return { ...s, paradas: s.paradas.map((p) => (m.has(p.id) ? (m.get(p.id) === 'pendente' ? { ...p, status: 'pendente', baixaEm: null, gps: null } : { ...p, status: m.get(p.id), baixaEm: agora }) : p)) };
+  }),
+  /* finaliza o romaneio e, se pedido, já dá baixa nos pendentes com o status escolhido */
+  finalizarRomaneio: (id, statusPendentes = null) => {
+    if (statusPendentes) act.baixarLote(getState().paradas.filter((p) => p.romaneioId === id && p.status === 'pendente').map((p) => ({ id: p.id, status: statusPendentes })));
+    act.upd('romaneios', id, { finalizado: true });
+  },
   desfazer: (id) => act.upd('paradas', id, { status: 'pendente', baixaEm: null, gps: null }),
 
   /* grupos: [{ empresaId, paradas }] — um romaneio por parceiro (um PDF da Total pode trazer pacote e cartão) */

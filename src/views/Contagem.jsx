@@ -62,7 +62,7 @@ export default function Contagem() {
           <tr><td>Total</td>{tot.map((t, i) => <td key={i} className="r">{num(t)}</td>)}<td className="r">{num(soma)}</td></tr>
           <tr className="ac"><td>× {mot.tipo === 'fixo' ? 'fixo mensal' : brl(v)}</td>{tot.map((t, i) => <td key={i} className="r">{mot.tipo === 'fixo' ? '' : brl(t * v)}</td>)}<td className="r">{mot.tipo === 'fixo' ? brl(Math.round(mot.valor / 2)) : brl(soma * v)}</td></tr>
         </tfoot></table></div>
-        <p className="small muted" style={{ marginTop: 10 }}>Digite o que o motorista levou/entregou. Número em cinza dentro da célula = quanto ele bipou no app. Célula laranja = o que você lançou difere do que foi bipado.</p>
+        <p className="small muted" style={{ marginTop: 10 }}>Número em cinza = calculado automaticamente (rotas e entregas). Digitar só para corrigir. Célula laranja = o que você digitou difere do cálculo automático.</p>
       </div>
     );
   };
@@ -98,6 +98,11 @@ export default function Contagem() {
             <button className="btn icon" onClick={() => setQ(quinzenaSeguinte(q))} aria-label="Próxima quinzena"><Icon n="right" /></button>
           </div>
           <Chips valor={modo} onChange={setModo} opcoes={[['motorista', 'Por motorista'], ['dia', 'Por dia']]} />
+        </div>
+        <div className="row" style={{ marginTop: 12, flexWrap: 'wrap', gap: 10 }}>
+          <span className="small muted">O número em cinza vem <b>sozinho</b> das rotas distribuídas e das entregas. Digite só para corrigir ou para parceiro sem romaneio (ex.: cartão).</span>
+          <span className="small muted">Contar por:</span>
+          <Chips valor={S.ajustes.contarPor || 'entregue'} onChange={(v) => act.ajustes({ contarPor: v })} opcoes={[['entregue', 'Entregues'], ['carga', 'Carga distribuída']]} />
         </div>
       </div>
       {modo === 'motorista' ? porMotorista() : porDia()}

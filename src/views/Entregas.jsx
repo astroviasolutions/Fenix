@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { dataBR, STATUS } from '../lib.js';
 import { act, useStore } from '../store.js';
 import { Chips, Modal, Vazio } from '../ui.jsx';
+import BaixaLote from './BaixaLote.jsx';
 
 const tom = (s) => (s === 'entregue' ? 'ok' : s === 'pendente' ? '' : 'bad');
 
@@ -12,6 +13,7 @@ export default function Entregas() {
   const [mot, setMot] = useState('');
   const [lim, setLim] = useState(60);
   const [sel, setSel] = useState(null);
+  const [marc, setMarc] = useState(() => new Set());
 
   const base = useMemo(() => S.paradas.filter((p) => (!rom || p.romaneioId === rom) && (!mot || (mot === '_' ? !p.motoristaId : p.motoristaId === mot))), [S.paradas, rom, mot]);
   const cont = useMemo(() => { const c = { todas: base.length }; for (const k of Object.keys(STATUS)) c[k] = 0; for (const p of base) c[p.status]++; return c; }, [base]);
@@ -25,6 +27,7 @@ export default function Entregas() {
 
   return (
     <div className="stack">
+      <BaixaLote />
       <div className="card">
         <div className="stack">
           <Chips valor={st} onChange={(v) => { setSt(v); setLim(60); }} opcoes={[['todas', 'Todas', cont.todas], ...Object.entries(STATUS).map(([k, r]) => [k, r, cont[k]])]} />
@@ -37,14 +40,27 @@ export default function Entregas() {
 
       <div className="card">
         <h2>Paradas ({lista.length})</h2>
-        <p className="sub">{lista.reduce((t, p) => t + p.pacotes.length, 0)} pacotes · toque numa parada para ver os detalhes</p>
+        <p className="sub">{lista.reduce((t, p) => t + p.pacotes.length, 0)} pacotes · toque numa parada para ver os detalhes · marque várias para dar baixa de uma vez</p>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+          <button className="btn sm" onClick={() => setMarc(new Set(lista.map((p) => p.id)))}>Marcar as {lista.length} do filtro</button>
+          {marc.size > 0 && <button className="btn sm" onClick={() => setMarc(new Set())}>Limpar ({marc.size})</button>}
+        </div>
+        {marc.size > 0 && (
+          <div className="card dest" style={{ padding: 14, marginBottom: 10 }}>
+            <p className="k-l">{marc.size} parada(s) marcada(s) · {S.paradas.filter((p) => marc.has(p.id)).reduce((t, p) => t + p.pacotes.length, 0)} pacotes — marcar como:</p>
+            <div className="chips" style={{ marginTop: 6 }}>{Object.entries(STATUS).map(([k, r]) => <button key={k} className="chip" onClick={() => { act.baixarLote([...marc].map((id) => ({ id, status: k }))); setMarc(new Set()); }}>{r}</button>)}</div>
+          </div>
+        )}
         {!lista.length ? <p className="muted">Nenhuma parada com esse filtro.</p> : (
           <div className="list">
             {lista.slice(0, lim).map((p) => (
-              <button key={p.id} className="item" style={{ width: '100%', background: 'none', border: 0, textAlign: 'left', cursor: 'pointer' }} onClick={() => setSel(p.id)}>
+              <div key={p.id} className="row" style={{ gap: 10, alignItems: 'center' }}>
+              <input type="checkbox" style={{ width: 20, height: 20, accentColor: 'var(--ac)' }} checked={marc.has(p.id)} onChange={() => setMarc((m) => { const n = new Set(m); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })} aria-label={`Marcar ${p.endereco}`} />
+              <button className="item" style={{ flex: 1, background: 'none', border: 0, textAlign: 'left', cursor: 'pointer' }} onClick={() => setSel(p.id)}>
                 <span><b>{p.endereco}</b><br /><span className="muted small">{[p.bairro, p.cidade].filter(Boolean).join(' · ')} · {p.cliente || 'Cliente'} · {p.pacotes.length} pacote(s)</span></span>
                 <span className="row"><span className="muted small">{nomeM(p.motoristaId)}</span><span className={`tag ${tom(p.status)}`}>{STATUS[p.status]}</span></span>
               </button>
+              </div>
             ))}
           </div>
         )}

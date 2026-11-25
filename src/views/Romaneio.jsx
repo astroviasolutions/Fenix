@@ -2,9 +2,9 @@ import { useMemo, useRef, useState } from 'react';
 import { acharCasadas } from '../casadas.js';
 import { cidadeCanon, CIDADES_PR, ROTULOS, unificarCidades } from '../leitor/campos.js';
 import { lerArquivo } from '../leitor/index.js';
-import { dataBR, hoje, norm, num } from '../lib.js';
+import { dataBR, hoje, norm, num, STATUS } from '../lib.js';
 import { act, useStore } from '../store.js';
-import { Chips, Icon, Vazio } from '../ui.jsx';
+import { Chips, Icon, Modal, Vazio } from '../ui.jsx';
 import Rotas from './Rotas.jsx';
 
 const FONTES = { tabela: 'Tabela em PDF', blocos: 'Fichas por entrega', ctrc: 'Romaneio de transportadora', planilha: 'Planilha' };
@@ -44,6 +44,8 @@ export default function Romaneio() {
   const [arrastando, setArrastando] = useState(false);
   const [novaEmp, setNovaEmp] = useState('');
   const [aba, setAba] = useState('arquivo');
+  const [fin, setFin] = useState(null);   // romaneio que está sendo finalizado
+  const [finSt, setFinSt] = useState('entregue');
   const [cidadePad, setCidadePad] = useState('');
   const [resp, setResp] = useState(null);       // resposta sobre o motorista do documento: 'doc' | 'outro' | 'depois'
   const inp = useRef(null);
@@ -274,12 +276,30 @@ export default function Romaneio() {
             {romaneios.slice(0, 60).map((r) => {
               const ps = S.paradas.filter((p) => p.romaneioId === r.id);
               return (<tr key={r.id}><td>{dataBR(r.data)}</td><td>{S.empresas.find((e) => e.id === r.empresaId)?.nome || '—'}</td><td className="muted small">{r.arquivo}</td><td className="r">{ps.length}</td><td className="r">{ps.reduce((t, p) => t + p.pacotes.length, 0)}</td>
-                <td><button className="chip" onClick={() => act.upd('romaneios', r.id, { finalizado: !r.finalizado })}>{r.finalizado ? 'Finalizado' : 'Em andamento'}</button></td>
+                <td><button className="chip" onClick={() => (r.finalizado ? act.upd('romaneios', r.id, { finalizado: false }) : (setFinSt('entregue'), setFin(r.id)))} title={r.finalizado ? 'Reabrir' : 'Finalizar'}>{r.finalizado ? 'Finalizado' : `Em andamento · ${ps.filter((p) => p.status === 'pendente').length} pendente(s)`}</button></td>
                 <td className="r"><button className="btn sm danger" onClick={() => window.confirm('Excluir esta carga e todas as paradas dela?') && act.excluirRomaneio(r.id)}>Excluir</button></td></tr>);
             })}
           </tbody></table></div>
         )}
       </div>
+
+      <Modal aberto={!!fin} fechar={() => setFin(null)} titulo="Finalizar esta carga">
+        {fin && (() => {
+          const pend = S.paradas.filter((p) => p.romaneioId === fin && p.status === 'pendente');
+          const pac = pend.reduce((t, p) => t + p.pacotes.length, 0);
+          return (
+            <div className="stack">
+              {pend.length ? <p>Ainda há <b>{pend.length} parada(s)</b> ({pac} pacotes) pendentes. O que fazer com elas?</p> : <p>Todas as paradas já foram baixadas.</p>}
+              {pend.length > 0 && <div><p className="k-l">Marcar os pendentes como</p><Chips valor={finSt} onChange={setFinSt} opcoes={Object.entries(STATUS).filter(([k]) => k !== 'pendente')} /></div>}
+              <div className="row" style={{ flexWrap: 'wrap' }}>
+                <button className="btn ac" onClick={() => { act.finalizarRomaneio(fin, pend.length ? finSt : null); setFin(null); }}><Icon n="check" size={18} /> {pend.length ? `Finalizar e marcar ${pend.length} como ${STATUS[finSt].toLowerCase()}` : 'Finalizar'}</button>
+                {pend.length > 0 && <button className="btn" onClick={() => { act.finalizarRomaneio(fin, null); setFin(null); }}>Finalizar deixando pendentes</button>}
+                <button className="btn" onClick={() => setFin(null)}>Cancelar</button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

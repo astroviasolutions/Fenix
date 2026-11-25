@@ -242,7 +242,7 @@ label.f { display: grid; gap: 6px; font-size: 13px; color: var(--tx2); }
 .grade tfoot td { border-top: 2px solid var(--line); font-weight: 700; padding: 10px 8px; }
 .grade tfoot tr.ac td { color: var(--ac); }
 .cel { width: 64px; text-align: right; padding: 7px 8px; border-radius: 10px; border: 1px solid transparent; background: var(--surface2); color: var(--tx); font: inherit; }
-.cel::placeholder { color: var(--tx2); opacity: 0.55; }
+.cel::placeholder { color: var(--tx2); opacity: 1; }
 .cel:focus { outline: 2px solid var(--ac); background: var(--surface); }
 .cel.diverge { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 14%, var(--surface2)); }
 .sec { font: italic 700 15px var(--f1); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx2); margin: 18px 0 4px; }

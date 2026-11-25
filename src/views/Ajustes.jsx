@@ -45,6 +45,8 @@ export default function Ajustes() {
 
       <div className="card">
         <h2>Valores e prazos</h2>
+        <label className="f" style={{ maxWidth: 320, marginBottom: 14 }}>Contagem automática de pacotes
+          <select className="sel" value={S.ajustes.contarPor || 'entregue'} onChange={(ev) => act.ajustes({ contarPor: ev.target.value })}><option value="entregue">Só os entregues (baixados)</option><option value="carga">Toda a carga distribuída ao motorista</option></select></label>
         <label className="f" style={{ maxWidth: 320 }}>Valor padrão por pacote entregue (motoristas)<Money valor={S.ajustes.valorPadrao} onChange={(v) => act.ajustes({ valorPadrao: v })} /></label>
         <h2 style={{ marginTop: 24 }}>Parceiros ({S.empresas.length})</h2>
         <p className="sub">“Recebe por pacote” é o valor que o parceiro paga à Fenix. Sem ele, entradas e resultado não aparecem. Serviços separados, como o cartão da Total, entram como um parceiro à parte. O prazo diz em quantos dias a entrega ainda conta como no prazo.</p>

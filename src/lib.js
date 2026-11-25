@@ -76,6 +76,45 @@ export const STATUS = {
   pendente: 'Pendente', entregue: 'Entregue', ausente: 'Cliente ausente', recusado: 'Recusado',
   avaria: 'Avaria', endereco_errado: 'Endereço errado', reagendar: 'Reagendar',
 };
+/* "Entregue com sucesso", "Cliente ausente", "Recusado"… (texto de planilha de parceiro) → status do sistema */
+export function statusDoTexto(t) {
+  const n = norm(t);
+  if (!n) return null;
+  if (/ausent/.test(n)) return 'ausente';
+  if (/recus|rejeit/.test(n)) return 'recusado';
+  if (/avari|danific|extravi/.test(n)) return 'avaria';
+  if (/endereco|nao localiz|inexist|incorret/.test(n)) return 'endereco_errado';
+  if (/reagend|reprogram|remarc|nao entreg|insucesso|devol/.test(n)) return 'reagendar';
+  if (/pendent|aberto|em rota/.test(n)) return 'pendente';
+  if (/entreg|deliver|conclu|baixad|sucesso|^ok$|^sim$|^s$/.test(n)) return 'entregue';
+  return null;
+}
+
+/* Planeja uma baixa em lote a partir de [{ codigo, status }]. Só aplica na parada se TODOS os códigos dela estão na lista. */
+export function planejarBaixa(S, entradas, { sobrescrever = false } = {}) {
+  const porCodigo = new Map();
+  for (const p of S.paradas) for (const c of p.pacotes) porCodigo.set(String(c).trim().toLowerCase(), p);
+  const dec = new Map(); // paradaId → { parada, status por código }
+  const naoAchados = [];
+  for (const e of entradas) {
+    const cod = String(e.codigo ?? '').trim().toLowerCase();
+    if (!cod) continue;
+    const p = porCodigo.get(cod);
+    if (!p) { naoAchados.push(e.codigo); continue; }
+    const d = dec.get(p.id) || { parada: p, cods: new Map() };
+    d.cods.set(cod, e.status); dec.set(p.id, d);
+  }
+  const aplicar = [], parciais = [], jaBaixadas = [];
+  for (const { parada: p, cods } of dec.values()) {
+    if (cods.size < p.pacotes.length) { parciais.push(p); continue; }
+    const st = [...cods.values()][0];
+    if (p.status !== 'pendente' && !sobrescrever) { jaBaixadas.push(p); continue; }
+    if (p.status === st) continue;
+    aplicar.push({ id: p.id, status: st });
+  }
+  return { aplicar, parciais, jaBaixadas, naoAchados };
+}
+
 export const OCORRENCIAS = ['ausente', 'recusado', 'avaria', 'endereco_errado', 'reagendar'];
 export const CATEGORIAS_BASE = ['Repasse de parceira', 'Combustível', 'Manutenção', 'Parcela de veículo', 'Impostos', 'Comissão de motorista', 'Outras'];
 export const CAT_COMISSAO = 'Comissão de motorista';
@@ -95,8 +134,10 @@ export function pacotesPeriodo(S, { ini, fim, empresaId = '', motoristaId = '' }
     return x;
   };
   const passa = (data, m, e) => data >= ini && data <= fim && (!empresaId || e === empresaId) && (!motoristaId || m === motoristaId);
+  /* base da contagem automática: só o que foi entregue (padrão) ou toda a carga distribuída ao motorista */
+  const porCarga = S.ajustes.contarPor === 'carga';
   for (const p of S.paradas) {
-    if (p.status !== 'entregue') continue;
+    if (porCarga ? !p.motoristaId : p.status !== 'entregue') continue;
     const r = rom.get(p.romaneioId);
     if (r && passa(r.data, p.motoristaId, r.empresaId)) no(r.data, p.motoristaId, r.empresaId).bipado += p.pacotes.length;
   }

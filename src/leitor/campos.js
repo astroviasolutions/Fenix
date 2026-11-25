@@ -35,11 +35,12 @@ export const CAMPOS = [
   ['tipo', /^(tipo|tipo servico)$/, 1],
   ['peso', /\b(peso|kg|kgrea)\b/, 1],
   ['nf', /\b(nota fiscal|nfiscal|nf|nfe)\b/, 1],
+  ['status', /\b(status|situacao|ocorrencia|resultado|baixa)\b/, 1],
   ['entregador', /\b(entregador|motorista|courier|driver)\b/, 1],
 ];
 export const ROTULOS = {
   codigo: 'Código / etiqueta', cliente: 'Destinatário', endereco: 'Endereço', numero: 'Número', bairro: 'Bairro', cidade: 'Cidade', cep: 'CEP',
-  telefone: 'Telefone', remetente: 'Remetente', servico: 'Serviço', tipo: 'Tipo', peso: 'Peso', nf: 'Nota fiscal', entregador: 'Entregador',
+  telefone: 'Telefone', status: 'Status da entrega', remetente: 'Remetente', servico: 'Serviço', tipo: 'Tipo', peso: 'Peso', nf: 'Nota fiscal', entregador: 'Entregador',
 };
 export function campoDoRotulo(rotulo) {
   const t = norm(rotulo);
