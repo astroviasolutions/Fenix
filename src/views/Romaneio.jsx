@@ -19,7 +19,7 @@ function agrupar(registros, jaTem) {
     if (!cod || !r.endereco) continue;
     if (vistos.has(cod.toLowerCase()) || jaTem.has(cod.toLowerCase())) { repetidos++; continue; }
     vistos.add(cod.toLowerCase());
-    const cidade = String(r.cidade || '').replace(/\/.*$/, '').trim(), key = `${norm(r.endereco)}|${norm(cidade)}`;
+    const cidade = String(r.cidade || '').trim(), key = `${norm(r.endereco)}|${norm(cidade.replace(/\/.*$/, ''))}`;
     let g = grupos.get(key);
     if (!g) { g = { endereco: r.endereco, bairro: r.bairro || '', cidade, cliente: r.cliente || '', cep: r.cep || '', pacotes: [], gps: null }; grupos.set(key, g); }
     g.pacotes.push(cod);
@@ -86,9 +86,10 @@ export default function Romaneio() {
     let registros = unificarCidades(leitura.registros, conhecidas);
     /* arquivo sem cidade (ex.: Total): usa a escolhida; senão a única cidade do próprio arquivo; senão a mais usada no sistema */
     const doArquivo = [...new Set(registros.map((r) => r.cidade).filter(Boolean))];
+    const maisUsadaSis = null; void maisUsadaSis;
     const freq = {}; conhecidas.forEach((c) => (freq[c] = (freq[c] || 0) + 1));
     const maisUsada = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
-    const fallback = cidadeCanon(cidadePad, conhecidas).cidade || (doArquivo.length === 1 ? doArquivo[0] : '') || maisUsada;
+    const fallback = cidadeCanon(cidadePad, conhecidas).texto || (doArquivo.length === 1 ? doArquivo[0] : '') || maisUsada;
     registros = registros.map((r) => (r.cidade ? r : { ...r, cidade: fallback }));
     for (const r of registros) {
       const e = (dividido && alvo[chaveServico(r)]) || emp;
@@ -124,7 +125,7 @@ export default function Romaneio() {
   const [m, setM] = useState({ codigo: '', endereco: '', bairro: '', cidade: '', cliente: '', motoristaId: '' });
   const [ok, setOk] = useState('');
   const lancar = () => {
-    act.importar({ data, arquivo: 'lançamento manual', motoristaId: m.motoristaId || null, grupos: [{ empresaId: emp, paradas: [{ endereco: m.endereco.trim(), bairro: m.bairro.trim(), cidade: cidadeCanon(m.cidade).cidade, cliente: m.cliente.trim(), pacotes: [m.codigo.trim() || `MANUAL-${Date.now().toString(36)}`], gps: null }] }] });
+    act.importar({ data, arquivo: 'lançamento manual', motoristaId: m.motoristaId || null, grupos: [{ empresaId: emp, paradas: [{ endereco: m.endereco.trim(), bairro: m.bairro.trim(), cidade: cidadeCanon(m.cidade, S.paradas.map((p) => p.cidade)).texto, cliente: m.cliente.trim(), pacotes: [m.codigo.trim() || `MANUAL-${Date.now().toString(36)}`], gps: null }] }] });
     setM({ ...m, codigo: '', endereco: '', cliente: '' }); setOk('Parada lançada.'); setTimeout(() => setOk(''), 2500);
   };
 

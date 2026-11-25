@@ -30,7 +30,9 @@ export function lerCte(paginas) {
     const iCep = lMun.findIndex((i) => /^cep$/i.test(i.t) && i.x > dest.x);
     const cep = cepFmt(iCep >= 0 ? lMun[iCep + 1]?.t : '');
     const rem = limpa(lin(itens.find((i) => norm(i.t) === 'remetente')?.y).filter((i) => i.x > 40 && i.x < dest.x).map((i) => i.t).join(' ')).replace(/^REMETENTE\s*/i, '');
-    registros.push(finaliza({ codigo: doc.t, cliente: nome, endereco, bairro, cidade: mun ? mun.t : '', cep, remetente: rem, servico: 'B2B', tipo: 'B2B' }));
+    const lCarga = linhas.find((l) => l.itens[0] && /^carga$/i.test(l.itens[0].t));
+    const volumes = lCarga ? parseInt(lCarga.itens[lCarga.itens.length - 1].t, 10) || 1 : 1;
+    registros.push(finaliza({ volumes, codigo: doc.t, cliente: nome, endereco, bairro, cidade: mun ? mun.t : '', cep, remetente: rem, servico: 'B2B', tipo: 'B2B' }));
   }
   const vistos = new Set();
   const unicos = registros.filter((r) => !vistos.has(r.codigo) && vistos.add(r.codigo)); // 2ª via do mesmo CT-e

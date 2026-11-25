@@ -3,9 +3,10 @@ import { norm } from './lib.js';
 /* Rota = paradas do mesmo bairro (dentro da cidade). É a unidade que o dono distribui. */
 export function agruparRotas(paradas) {
   const m = new Map();
-  const nomeCidade = (p) => String(p.cidade || '').replace(/\/.*$/, '').trim();
+  const nomeCidade = (p) => String(p.cidade || '').trim();                       // exibe com UF (Castro/PR)
+  const chaveCidade = (c) => norm(c.replace(/\/.*$/, ''));
   /* PDF sem cidade (Total): se só existe uma cidade no conjunto, é ela */
-  const unicas = [...new Set(paradas.map(nomeCidade).filter(Boolean))];
+  const unicas = [...new Set(paradas.map(nomeCidade).filter(Boolean).map((c) => chaveCidade(c)))].map((k) => paradas.map(nomeCidade).find((c) => chaveCidade(c) === k));
   const padrao = unicas.length === 1 ? unicas[0] : 'Sem cidade';
   /* bairro cortado pelo parceiro ("Jardim Das Ar") vira o nome completo mais comprido que começa igual */
   const nomes = [...new Set(paradas.map((p) => String(p.bairro || '').trim()).filter(Boolean))].sort((a, b) => b.length - a.length);
@@ -14,7 +15,7 @@ export function agruparRotas(paradas) {
   for (const p of paradas) {
     const cidade = nomeCidade(p) || padrao;
     const bairro = completo.get(String(p.bairro || '').trim()) || 'Sem bairro';
-    const key = `${norm(cidade)}|${norm(bairro)}`;
+    const key = `${chaveCidade(cidade)}|${norm(bairro)}`;
     let r = m.get(key);
     if (!r) { r = { key, cidade, bairro, paradas: [], pacotes: 0 }; m.set(key, r); }
     r.paradas.push(p); r.pacotes += p.pacotes.length;

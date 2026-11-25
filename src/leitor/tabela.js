@@ -146,7 +146,7 @@ export function finaliza(r) {
   delete o.numero;
   if (o.cep) o.cep = cepFmt(o.cep) || o.cep;
   if (o.telefone) o.telefone = telFmt(o.telefone) || '';
-  if (o.cidade) { const c = cidadeCanon(o.cidade); o.cidade = c.cidade; if (c.uf) o.uf = c.uf; }
+  if (o.cidade) { const c = cidadeCanon(o.cidade); o.cidade = c.texto; if (c.uf) o.uf = c.uf; }
   if (o.endereco) o.endereco = tituloBR(o.endereco, { endereco: true }).replace(/(\s*,)+\s*$/, '').replace(/,(\s*,)+/g, ',');
   if (o.bairro) o.bairro = tituloBR(o.bairro);
   if (o.cliente) o.cliente = tituloBR(o.cliente);

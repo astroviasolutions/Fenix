@@ -116,30 +116,39 @@ const lev = (a, b) => {
   return d[a.length][b.length];
 };
 
-/* "castro", "CASTRO", "Castro-PR", "Castro/PR", "Castro - Pr" → { cidade: 'Castro', uf: 'PR' }.
-   `conhecidas`: grafias já usadas no sistema; a grafia certa é a mais completa/acentuada entre elas. */
+const semUF = (c) => { const m = String(c || '').match(/^(.*?\S)\s*[\s/,\-–(]+\s*([A-Za-z]{2})\)?$/); return m && UF_VALIDAS.has(m[2].toLowerCase()) ? m[1] : String(c || '').trim(); };
+const UF_PADRAO = 'PR'; // cidades da lista da região assumem PR quando o arquivo não informa
+
+/* "castro", "CASTRO", "Castro-PR", "Castro/PR", "Castro - Pr", "Castro/RP" → { cidade: 'Castro', uf: 'PR', texto: 'Castro/PR' }.
+   `conhecidasExtra`: grafias já usadas no sistema; a grafia certa é a mais completa/acentuada entre elas. */
 export function cidadeCanon(txt, conhecidasExtra = []) {
-  const conhecidas = [...conhecidasExtra, ...CIDADES_PR];
+  const conhecidas = [...conhecidasExtra.map(semUF), ...CIDADES_PR];
   let t = limpa(txt);
-  if (!t) return { cidade: '', uf: '' };
+  if (!t) return { cidade: '', uf: '', texto: '' };
   let uf = '';
   const m = t.match(/^(.*?\S)\s*[\s/,\-–(]+\s*([A-Za-z]{2})\)?$/);
   if (m && UF_VALIDAS.has(m[2].toLowerCase())) { t = m[1]; uf = m[2].toUpperCase() === 'RP' ? 'PR' : m[2].toUpperCase(); } // "RP" é erro de digitação de PR
-  const nome = tituloBR(t);
-  const k = norm(nome);
+  let cidade = tituloBR(t);
+  const k = norm(cidade);
   const igual = conhecidas.find((c) => norm(c) === k);
-  if (igual) return { cidade: igual, uf };
-  if (k.length >= 6) {
+  if (igual) cidade = igual;
+  else if (k.length >= 6) {
     const perto = conhecidas.find((c) => norm(c)[0] === k[0] && Math.abs(norm(c).length - k.length) <= 1 && lev(norm(c), k) === 1);
-    if (perto) return { cidade: perto, uf };
+    if (perto) cidade = perto;
   }
-  return { cidade: nome, uf };
+  if (!uf && CIDADES_PR.some((c) => norm(c) === norm(cidade))) uf = UF_PADRAO;
+  return { cidade, uf, texto: uf ? `${cidade}/${uf}` : cidade };
 }
 
 /* Unifica a grafia das cidades de uma lista de registros (e das já cadastradas): a forma mais frequente/acentuada vence. */
 export function unificarCidades(registros, jaUsadas = []) {
-  const cont = new Map();
-  for (const r of registros) { const c = cidadeCanon(r.cidade).cidade; if (c) cont.set(c, (cont.get(c) || 0) + 1); }
-  const ordem = [...new Set([...jaUsadas.map((c) => cidadeCanon(c).cidade),  ...[...cont.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0])])].filter(Boolean);
-  return registros.map((r) => { if (!r.cidade) return r; const { cidade, uf } = cidadeCanon(r.cidade, ordem); return { ...r, cidade, uf: uf || r.uf || '' }; });
+  const cont = new Map(), ufDe = new Map();
+  for (const r of registros) { const c = cidadeCanon(r.cidade); if (c.cidade) { cont.set(c.cidade, (cont.get(c.cidade) || 0) + 1); if (c.uf) ufDe.set(norm(c.cidade), c.uf); } }
+  const ordem = [...new Set([...jaUsadas.map((c) => cidadeCanon(c).cidade), ...[...cont.entries()].sort((a, b) => b[1] - a[1]).map((x) => x[0])])].filter(Boolean);
+  return registros.map((r) => {
+    if (!r.cidade) return r;
+    const c = cidadeCanon(r.cidade, ordem);
+    const uf = c.uf || ufDe.get(norm(c.cidade)) || r.uf || '';
+    return { ...r, cidade: uf ? `${c.cidade}/${uf}` : c.cidade, uf };
+  });
 }

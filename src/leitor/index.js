@@ -52,6 +52,8 @@ export function lerPaginas(paginas, mapaManual = null) {
   const avisos = [];
   const lidos = new Set(r.registros.map((x) => x.codigo).filter(Boolean)).size;
   if (esperado != null && esperado !== lidos) avisos.push(`O documento informa ${esperado} no total, mas li ${lidos}. ${lidos < esperado ? `Faltam ${esperado - lidos}: confira se há itens em outra página ou outro formato (ex.: B2B).` : 'Sobrou: confira duplicados.'}`);
+  const vols = r.registros.reduce((t, x) => t + (Number(String(x.volumes ?? 1).replace(',', '.')) || 1), 0);
+  if (vols > lidos) avisos.push(`Informativo: os ${lidos} documentos somam ${vols} volumes físicos para carregar (há pacotes com mais de 1 volume).`);
   const semEnd = r.registros.filter((x) => x.codigo && !x.endereco).length;
   if (semEnd) avisos.push(`${semEnd} pacote(s) sem endereço legível.`);
   return { ...r, esperado, lidos, avisos, motoristaDoc: acharMotorista(paginas) };
