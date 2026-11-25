@@ -60,7 +60,7 @@ export function ImportarPlanilha({ aberto, fechar, arquivoInicial }) {
   function importarControle() {
     const usar = abas.filter((a) => a.usar);
     const emp = new Map(getState().empresas.map((e) => [norm(e.nome), e.id]));
-    const ensureEmp = (nome) => { const k = norm(nome); if (!emp.has(k)) emp.set(k, act.add('empresas', { nome: nome.trim().replace(/\s+/g, ' '), tarifa: 0, prazoDias: 1 })); return emp.get(k); };
+    const ensureEmp = (nome) => { const k = norm(nome); if (!emp.has(k)) emp.set(k, act.add('empresas', { nome: tituloBR(nome.trim().replace(/\s+/g, ' ')), tarifa: 0, prazoDias: 1 })); return emp.get(k); };
     const itens = [], ids = {};
     for (const a of usar) {
       let mid = getState().motoristas.find((m) => norm(m.nome) === norm(a.nome))?.id;
