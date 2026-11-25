@@ -3,9 +3,75 @@ import { addDias, norm, quinzena, quinzenaSeguinte, resultadoQuinzena, valorMoto
 /* ============ LER a planilha de controle do cliente (uma aba por motorista, DATA + uma coluna por parceiro) ============ */
 const num = (c) => (c && typeof c.v === 'number' ? c.v : null);
 
-export async function lerControle(arquivo) {
+async function abrir(arquivo) {
   const mod = await import('xlsx'); const XLSX = mod.utils ? mod : mod.default;
-  const wb = XLSX.read(new Uint8Array(await arquivo.arrayBuffer()), { type: 'array', cellFormula: true });
+  return { XLSX, wb: XLSX.read(new Uint8Array(await arquivo.arrayBuffer()), { type: 'array', cellFormula: true }) };
+}
+const dataSerial = (v) => { const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 864e5); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+
+/* Que planilha é esta? controle (aba por motorista) · total (QTD./CARTÃO do parceiro por dia) · fenix (entradas, fixas, impostos) */
+export async function classificar(arquivo) {
+  const { XLSX, wb } = await abrir(arquivo);
+  const cel = (ws, a) => ws?.[a]?.v;
+  const abas = wb.SheetNames.map((n) => wb.Sheets[n]).filter(Boolean);
+  if (abas.some((ws) => norm(cel(ws, 'A1')) === 'data' && /^qtd/.test(norm(cel(ws, 'B1'))))) return { tipo: 'total', ...lerTotalWb(wb, XLSX) };
+  const rotulos = (ws) => Object.values(ws).filter((c) => c && typeof c.v === 'string').map((c) => norm(c.v));
+  if (abas.some((ws) => { const r = rotulos(ws); return r.includes('fixas') && r.includes('entradas'); })) return { tipo: 'fenix', ...lerFenixWb(wb, XLSX) };
+  const c = lerControleWb(wb, XLSX).filter((x) => !/^conf/i.test(x.nome));
+  return c.length ? { tipo: 'controle', abas: c } : { tipo: 'desconhecido' };
+}
+
+/* TOTAL_2026.xlsx: por mês, DATA | QTD. | CARTÃO (1ª quinzena em A–C, 2ª em F–H); a tarifa está na fórmula (=B19*2,5) */
+function lerTotalWb(wb, XLSX) {
+  const informado = []; let tarifa = null, tarifaCartao = null;
+  for (const nome of wb.SheetNames) {
+    const ws = wb.Sheets[nome];
+    if (!ws || norm(ws.A1?.v) !== 'data') continue;
+    const f = (a) => String(ws[a]?.f || '').match(/\*\s*([\d.]+)\s*$/)?.[1];
+    if (f('B20') && ws.B19?.v) tarifa = Number(f('B20')); else tarifa ??= f('B20') ? Number(f('B20')) : null;
+    if (f('C20')) tarifaCartao = Number(f('C20'));
+    for (const [cd, cq, cc] of [['A', 'B', 'C'], ['F', 'G', 'H']]) {
+      let ini = null, qtd = 0, cartao = 0;
+      for (let r = 2; r <= 18; r++) {
+        const d = ws[`${cd}${r}`]?.v;
+        if (typeof d !== 'number' || d < 40000) continue;
+        ini ||= dataSerial(d);
+        qtd += Number(ws[`${cq}${r}`]?.v) || 0; cartao += Number(ws[`${cc}${r}`]?.v) || 0;
+      }
+      if (ini && (qtd || cartao)) informado.push({ ini, mes: nome, qtd, cartao });
+    }
+  }
+  return { informado, tarifa, tarifaCartao };
+}
+
+/* FENIX_2026.xlsx: coluna FIXAS (nome | valor) e imposto na fórmula (=B20*16%) da aba mais recente */
+function lerFenixWb(wb, XLSX) {
+  let fixas = [], impostoPct = null, mes = '';
+  for (const nome of [...wb.SheetNames].reverse()) {
+    const ws = wb.Sheets[nome]; if (!ws) continue;
+    const achados = [];
+    for (const [a, c] of Object.entries(ws)) { if (a[0] !== '!' && c && typeof c.v === 'string' && norm(c.v) === 'fixas') achados.push(a); }
+    if (!achados.length || fixas.length) continue;
+    const m = achados[0].match(/^([A-Z]+)(\d+)$/); const col = XLSX.utils.decode_col(m[1]), row0 = Number(m[2]);
+    for (let r = row0; r < row0 + 30; r++) {
+      const n = ws[XLSX.utils.encode_cell({ r, c: col })]?.v, v = ws[XLSX.utils.encode_cell({ r, c: col + 1 })]?.v;
+      if (n && typeof v === 'number' && v > 0 && !/^total$/i.test(String(n).trim())) fixas.push({ nome: String(n).trim(), valor: Math.round(v * 100) });
+      else if (!n) break;
+    }
+    mes = nome;
+  }
+  for (const nome of [...wb.SheetNames].reverse()) { // imposto: da aba mais recente que tiver a fórmula (=B20*16%)
+    for (const c of Object.values(wb.Sheets[nome] || {})) { const t = String(c?.f || '').match(/\*\s*(\d+(?:[.,]\d+)?)\s*%/); if (t) { impostoPct = Number(t[1].replace(',', '.')) / 100; break; } }
+    if (impostoPct != null) break;
+  }
+  return { fixas, impostoPct, mes };
+}
+
+export async function lerControle(arquivo) {
+  const { XLSX, wb } = await abrir(arquivo);
+  return lerControleWb(wb, XLSX);
+}
+function lerControleWb(wb, XLSX) {
   const abas = [];
   wb.SheetNames.forEach((nome, i) => {
     const ws = wb.Sheets[nome];

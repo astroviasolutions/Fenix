@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
-import { exportarControle, lerBlocoColado, lerControle, matrizDoTexto } from '../controle.js';
-import { agregarPacotes, brl, acertoQuinzena, dataBR, norm, num, quinzena } from '../lib.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { classificar, exportarControle, lerBlocoColado, matrizDoTexto } from '../controle.js';
+import { acertoQuinzena, agregarPacotes, brl, dataBR, norm, num, quinzena, uid } from '../lib.js';
 import { act, getState, useStore } from '../store.js';
 import { Icon, Modal } from '../ui.jsx';
 
@@ -27,25 +27,36 @@ function Colar({ aberto, fechar, q, motId }) {
   );
 }
 
-/* Importa a planilha de controle inteira (uma aba por motorista) e confere se tudo bate com o que a planilha calculou. */
-function Importar({ aberto, fechar }) {
+/* Importa QUALQUER planilha do cliente: reconhece sozinho se é a de controle (aba por motorista), a da Total (QTD./CARTÃO)
+   ou a FENIX (fixas e imposto) e puxa tudo o que o sistema precisa. */
+export function ImportarPlanilha({ aberto, fechar, arquivoInicial }) {
   const S = useStore();
-  const [abas, setAbas] = useState(null);
+  const [res, setRes] = useState(null);       // resultado de classificar()
+  const [abas, setAbas] = useState(null);     // controle: com checkbox
   const [erro, setErro] = useState('');
   const [feito, setFeito] = useState(null);
+  const [busy, setBusy] = useState(false);
   const inp = useRef(null);
+  const ultimo = useRef(null);
 
   async function receber(f) {
-    setErro(''); setAbas(null); setFeito(null);
+    setErro(''); setRes(null); setAbas(null); setFeito(null);
     if (!f) return;
+    setBusy(true);
     try {
-      const a = (await lerControle(f)).filter((x) => !/^conf/i.test(x.nome));
-      if (!a.length) throw new Error('Não achei abas de motorista (colunas DATA + parceiros) neste arquivo.');
-      setAbas(a.map((x) => ({ ...x, usar: true })));
+      const r = await classificar(f);
+      if (r.tipo === 'desconhecido') throw new Error('Não reconheci esta planilha. Ela precisa ter abas por motorista (coluna DATA + parceiros), ou ser a TOTAL (QTD./CARTÃO) ou a FENIX (ENTRADAS/FIXAS).');
+      setRes(r);
+      if (r.tipo === 'controle') setAbas(r.abas.map((x) => ({ ...x, usar: true })));
     } catch (e) { setErro(e.message || 'Não consegui ler a planilha.'); }
+    setBusy(false);
   }
+  useEffect(() => { if (aberto && arquivoInicial && ultimo.current !== arquivoInicial) { ultimo.current = arquivoInicial; receber(arquivoInicial); } }, [aberto, arquivoInicial]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function importar() {
+  const achaEmp = (est, nome, extra = []) => { const k = norm(nome); return est.empresas.find((e) => norm(e.nome) === k || extra.some((x) => norm(e.nome).includes(x))); };
+  const garanteEmp = (nome, extra = []) => achaEmp(getState(), nome, extra)?.id || act.add('empresas', { nome, tarifa: 0, prazoDias: 1 });
+
+  function importarControle() {
     const usar = abas.filter((a) => a.usar);
     const emp = new Map(getState().empresas.map((e) => [norm(e.nome), e.id]));
     const ensureEmp = (nome) => { const k = norm(nome); if (!emp.has(k)) emp.set(k, act.add('empresas', { nome: nome.trim().replace(/\s+/g, ' '), tarifa: 0, prazoDias: 1 })); return emp.get(k); };
@@ -60,12 +71,28 @@ function Importar({ aberto, fechar }) {
       for (const l of a.lancamentos) itens.push({ data: l.data, motoristaId: mid, empresaId: ensureEmp(l.parceiro), qtd: l.qtd });
     }
     act.contarLote(itens);
-    setFeito({ abas: usar, ids, total: itens.reduce((t, i) => t + i.qtd, 0) });
+    setFeito({ tipo: 'controle', abas: usar, ids, total: itens.reduce((t, i) => t + i.qtd, 0) });
   }
 
-  /* conferência: o que o sistema calcula × o que a planilha calculou, por motorista e quinzena */
+  function importarTotal() {
+    const idT = garanteEmp('Total', ['total']), idC = garanteEmp('Cartão', ['cartao']);
+    if (res.tarifa) act.upd('empresas', idT, { tarifa: Math.round(res.tarifa * 100) });
+    if (res.tarifaCartao) act.upd('empresas', idC, { tarifa: Math.round(res.tarifaCartao * 100) });
+    for (const x of res.informado) { act.conferir(x.ini, idT, { informado: x.qtd }); if (x.cartao) act.conferir(x.ini, idC, { informado: x.cartao }); }
+    setFeito({ tipo: 'total', n: res.informado.length });
+  }
+
+  function importarFenix() {
+    const atuais = getState().ajustes.fixas || [];
+    const nomes = new Set(res.fixas.map((f) => norm(f.nome)));
+    const fixas = [...atuais.filter((f) => !nomes.has(norm(f.nome))), ...res.fixas.map((f) => ({ id: atuais.find((a) => norm(a.nome) === norm(f.nome))?.id || uid(), nome: f.nome.replace(/\s+/g, ' '), valor: f.valor }))];
+    act.ajustes({ fixas, ...(res.impostoPct != null ? { impostoPct: res.impostoPct } : {}) });
+    setFeito({ tipo: 'fenix', n: res.fixas.length });
+  }
+
+  /* conferência da planilha de controle: sistema × planilha, por motorista e quinzena */
   const conf = useMemo(() => {
-    if (!feito) return null;
+    if (!feito || feito.tipo !== 'controle') return null;
     return feito.abas.map((a) => {
       const m = S.motoristas.find((x) => x.id === feito.ids[a.nome]);
       const blocos = a.blocos.filter((b) => b.soma || b.pago).map((b) => {
@@ -78,21 +105,25 @@ function Importar({ aberto, fechar }) {
     });
   }, [feito, S]);
 
+  const sair = () => { fechar(); setRes(null); setAbas(null); setFeito(null); setErro(''); ultimo.current = null; };
+
   return (
-    <Modal aberto={aberto} fechar={() => { fechar(); setAbas(null); setFeito(null); }} titulo="Importar a planilha de controle">
+    <Modal aberto={aberto} fechar={sair} titulo="Importar planilha do cliente">
       <div className="stack">
-        {!abas && !feito && (
+        {!res && !feito && (
           <>
-            <p className="muted small">Traga o arquivo do mês (ex.: <b>NOV_2026.xlsx</b>): uma aba por motorista, com DATA e uma coluna por parceiro. O sistema lê os números, cadastra o que faltar e <b>confere se bate</b> com os totais e o valor a pagar da própria planilha.</p>
-            <div className="drop" role="button" tabIndex={0} onClick={() => inp.current.click()} onKeyDown={(e) => e.key === 'Enter' && inp.current.click()}>
-              <Icon n="upload" size={26} /><p><b>Escolher a planilha (.xlsx)</b></p>
+            <p className="muted small">Traga qualquer planilha dele: a de <b>controle do mês</b> (ex.: NOV_2026.xlsx, uma aba por motorista), a <b>TOTAL_2026</b> (QTD. e CARTÃO) ou a <b>FENIX_2026</b> (fixas e imposto). O sistema reconhece qual é, puxa o que precisa e confere se bate.</p>
+            <div className="drop" role="button" tabIndex={0} aria-busy={busy} onClick={() => inp.current.click()} onKeyDown={(e) => e.key === 'Enter' && inp.current.click()}>
+              <Icon n="upload" size={26} /><p><b>{busy ? 'Lendo a planilha…' : 'Escolher a planilha (.xlsx)'}</b></p>
               <input ref={inp} type="file" accept=".xlsx,.xls" hidden onChange={(e) => { receber(e.target.files[0]); e.target.value = ''; }} />
             </div>
           </>
         )}
         {erro && <p className="down" role="alert">{erro}</p>}
-        {abas && !feito && (
+
+        {res?.tipo === 'controle' && abas && !feito && (
           <>
+            <p><b>Planilha de controle</b> · {abas.length} aba(s) de motorista</p>
             <div className="tbl-wrap"><table className="tbl"><thead><tr><th /><th>Aba</th><th className="r">Lançamentos</th><th className="r">Pacotes</th><th className="r">Valor/pacote</th></tr></thead><tbody>
               {abas.map((a, i) => (
                 <tr key={a.nome}><td><input type="checkbox" checked={a.usar} onChange={() => setAbas(abas.map((x, k) => (k === i ? { ...x, usar: !x.usar } : x)))} /></td>
@@ -100,11 +131,33 @@ function Importar({ aberto, fechar }) {
                   <td className="r">{a.lancamentos.length}</td><td className="r">{num(a.lancamentos.reduce((t, l) => t + l.qtd, 0))}</td><td className="r">{a.taxa ? brl(Math.round(a.taxa * 100)) : '—'}</td></tr>
               ))}
             </tbody></table></div>
-            <p className="small muted">Parceiros que ainda não existem serão cadastrados (com “recebe por pacote” zerado; ajuste em Ajustes). Se uma coluna tem valor diferente do padrão do motorista (ex.: cartão a R$ 1,20), isso é guardado.</p>
-            <div className="row"><button className="btn ac" disabled={!abas.some((a) => a.usar)} onClick={importar}><Icon n="check" size={18} /> Importar e conferir</button><button className="btn" onClick={() => setAbas(null)}>Voltar</button></div>
+            <p className="small muted">Motoristas e parceiros que ainda não existem serão cadastrados. Valor diferente por coluna (ex.: cartão a R$ 1,20) é guardado.</p>
+            <div className="row"><button className="btn ac" disabled={!abas.some((a) => a.usar)} onClick={importarControle}><Icon n="check" size={18} /> Importar e conferir</button><button className="btn" onClick={() => { setRes(null); setAbas(null); }}>Voltar</button></div>
           </>
         )}
-        {feito && conf && (
+
+        {res?.tipo === 'total' && !feito && (
+          <>
+            <p><b>Planilha da Total</b> · contagem informada por quinzena</p>
+            <p className="small">Tarifa: <b>{res.tarifa ? brl(Math.round(res.tarifa * 100)) : '—'}</b> por pacote · <b>{res.tarifaCartao ? brl(Math.round(res.tarifaCartao * 100)) : '—'}</b> por cartão</p>
+            <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Quinzena</th><th>Mês</th><th className="r">QTD.</th><th className="r">CARTÃO</th></tr></thead><tbody>
+              {res.informado.map((x) => <tr key={x.ini}><td>{dataBR(x.ini)}</td><td>{x.mes}</td><td className="r">{num(x.qtd)}</td><td className="r">{num(x.cartao)}</td></tr>)}
+            </tbody></table></div>
+            <p className="small muted">Isso vira o “informado pelo parceiro” na Conferência (Resultado) e ajusta o “recebe por pacote” de Total e Cartão.</p>
+            <div className="row"><button className="btn ac" onClick={importarTotal}><Icon n="check" size={18} /> Importar</button><button className="btn" onClick={() => setRes(null)}>Voltar</button></div>
+          </>
+        )}
+
+        {res?.tipo === 'fenix' && !feito && (
+          <>
+            <p><b>Planilha FENIX</b> · despesas fixas (aba {res.mes}) e imposto</p>
+            <div className="list">{res.fixas.map((f) => <div className="item" key={f.nome} style={{ padding: '6px 2px' }}><span>{f.nome}</span><b>{brl(f.valor)}</b></div>)}</div>
+            <p className="small">Imposto sobre as entradas: <b>{res.impostoPct != null ? `${(res.impostoPct * 100).toLocaleString('pt-BR')}%` : 'não encontrado'}</b></p>
+            <div className="row"><button className="btn ac" disabled={!res.fixas.length && res.impostoPct == null} onClick={importarFenix}><Icon n="check" size={18} /> Importar</button><button className="btn" onClick={() => setRes(null)}>Voltar</button></div>
+          </>
+        )}
+
+        {feito?.tipo === 'controle' && conf && (
           <>
             <p><b>Importado:</b> {num(feito.total)} pacotes. Conferência com a planilha:</p>
             <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Motorista</th><th>Quinzena</th><th className="r">Pacotes planilha</th><th className="r">Sistema</th><th className="r">Pago planilha</th><th className="r">Sistema</th><th /></tr></thead><tbody>
@@ -112,8 +165,11 @@ function Importar({ aberto, fechar }) {
                 <tr key={c.nome + b.q.ini}><td>{c.nome}</td><td className="small">{dataBR(b.q.ini).slice(0, 5)}–{dataBR(b.q.fim).slice(0, 5)}</td><td className="r">{num(b.soma)}</td><td className="r">{num(b.sis)}</td><td className="r">{brl(Math.round(b.pago * 100))}</td><td className="r">{brl(Math.round(b.pagoSis * 100))}</td><td>{b.ok ? <span className="up">✔ bate</span> : <span className="down">≠ diferença</span>}</td></tr>
               )))}
             </tbody></table></div>
-            <div className="row"><button className="btn" onClick={() => { fechar(); setAbas(null); setFeito(null); }}>Fechar</button></div>
+            <div className="row"><button className="btn" onClick={sair}>Fechar</button></div>
           </>
+        )}
+        {feito && feito.tipo !== 'controle' && (
+          <><p className="up"><b>Pronto.</b> {feito.tipo === 'total' ? `${feito.n} quinzena(s) importada(s) para a conferência e tarifas atualizadas.` : `${feito.n} despesa(s) fixa(s) e o imposto foram importados.`}</p><div className="row"><button className="btn" onClick={sair}>Fechar</button></div></>
         )}
       </div>
     </Modal>
@@ -128,12 +184,12 @@ export function Ferramentas({ q, motId }) {
     <>
       <div className="row" style={{ marginTop: 12, flexWrap: 'wrap', gap: 8 }}>
         <button className="btn sm" onClick={() => setColar(true)}><Icon n="upload" size={16} /> Colar do Excel</button>
-        <button className="btn sm" onClick={() => setImp(true)}><Icon n="upload" size={16} /> Importar planilha de controle</button>
+        <button className="btn sm" onClick={() => setImp(true)}><Icon n="upload" size={16} /> Importar planilha do cliente</button>
         <button className="btn sm" onClick={() => exportarControle(S, q.ini)}><Icon n="print" size={16} /> Exportar para Excel</button>
         <span className="small muted">Também dá para colar direto nas células: clique numa célula e use Ctrl+V.</span>
       </div>
       <Colar aberto={colar} fechar={() => setColar(false)} q={q} motId={motId} />
-      <Importar aberto={imp} fechar={() => setImp(false)} />
+      <ImportarPlanilha aberto={imp} fechar={() => setImp(false)} />
     </>
   );
 }

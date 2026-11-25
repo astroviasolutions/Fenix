@@ -3,7 +3,7 @@ import { addDias, brl, dataBR, hoje, num, pacotesPeriodo, quinzena, quinzenaAnte
 import { act, useStore } from '../store.js';
 import { Chips, Icon, Vazio } from '../ui.jsx';
 import { matrizDoTexto, numeroOuNulo } from '../controle.js';
-import { Ferramentas } from './ControleExcel.jsx';
+import { Ferramentas, ImportarPlanilha } from './ControleExcel.jsx';
 
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const diaSemana = (d) => DIAS[new Date(d + 'T12:00:00').getDay()];
@@ -33,6 +33,7 @@ export default function Contagem() {
   const [modo, setModo] = useState('motorista');
   const [motId, setMotId] = useState('');
   const [dia, setDia] = useState(hoje());
+  const [impVazio, setImpVazio] = useState(false);
   const mot = S.motoristas.find((m) => m.id === motId) || S.motoristas[0];
 
   const dados = useMemo(() => {
@@ -43,8 +44,19 @@ export default function Contagem() {
   const get = (d, m, e) => dados.get(`${d}|${m}|${e}`);
 
   if (!S.motoristas.length || !S.empresas.length) {
-    return <div className="card"><Vazio titulo="Cadastre motoristas e parceiros" texto="A contagem cruza motorista × parceiro. Cadastre os dois em Ajustes para começar a lançar.">
-      <div className="row" style={{ justifyContent: 'center' }}><button className="btn ac" onClick={() => act.carregarDemo()}>Ver com dados fictícios</button></div></Vazio></div>;
+    return (
+      <>
+      <div className="card">
+        <Vazio titulo="Comece pela planilha dele" texto="Traga a planilha de controle do mês (ex.: NOV_2026.xlsx). O sistema cadastra motoristas e parceiros, lança os números e confere se bate. Também aceita a TOTAL_2026 e a FENIX_2026.">
+          <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="btn ac" onClick={() => setImpVazio(true)}><Icon n="upload" size={18} /> Importar planilha do cliente</button>
+            <button className="btn" onClick={() => act.carregarDemo()}>Ver com dados fictícios</button>
+          </div>
+        </Vazio>
+      </div>
+      <ImportarPlanilha aberto={impVazio} fechar={() => setImpVazio(false)} />
+      </>
+    );
   }
 
   const dias = lista(q.ini, q.fim);
@@ -101,6 +113,7 @@ export default function Contagem() {
   };
 
   return (
+    <>
     <div className="stack">
       <div className="card">
         <div className="row between" style={{ flexWrap: 'wrap', gap: 12 }}>
@@ -120,5 +133,7 @@ export default function Contagem() {
       </div>
       {modo === 'motorista' ? porMotorista() : porDia()}
     </div>
+    <ImportarPlanilha aberto={impVazio} fechar={() => setImpVazio(false)} />
+    </>
   );
 }

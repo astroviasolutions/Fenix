@@ -3,7 +3,8 @@ import { acharCasadas } from '../casadas.js';
 import { cidadeCanon, CIDADES_PR, ROTULOS, unificarCidades } from '../leitor/campos.js';
 import { lerArquivo } from '../leitor/index.js';
 import { lerPlanilha } from '../leitor/planilha.js';
-import { matrizDoTexto } from '../controle.js';
+import { classificar, matrizDoTexto } from '../controle.js';
+import { ImportarPlanilha } from './ControleExcel.jsx';
 import { dataBR, hoje, norm, num, STATUS } from '../lib.js';
 import { act, useStore } from '../store.js';
 import { Chips, Icon, Modal, Vazio } from '../ui.jsx';
@@ -58,6 +59,8 @@ export default function Romaneio() {
     if (!file) return;
     setBusy(true);
     try {
+      /* planilha de controle / TOTAL / FENIX não é romaneio: leva para a importação certa */
+      if (/\.(xlsx|xls)$/i.test(file.name)) { const t = await classificar(file).catch(() => null); if (t && t.tipo !== 'desconhecido') { setPlanilhaCliente(file); setBusy(false); return; } }
       const r = await lerArquivo(file);
       setLeitura({ ...r, arquivo: file.name });
       setMot('');
@@ -72,6 +75,7 @@ export default function Romaneio() {
     setBusy(false);
   }
   const [colado, setColado] = useState('');
+  const [planilhaCliente, setPlanilhaCliente] = useState(null);
   function lerColado() {
     setErro(''); setLeitura(null); setResp(null); setCidadePad('');
     const linhas = matrizDoTexto(colado);
@@ -302,6 +306,7 @@ export default function Romaneio() {
         )}
       </div>
 
+      <ImportarPlanilha aberto={!!planilhaCliente} fechar={() => setPlanilhaCliente(null)} arquivoInicial={planilhaCliente} />
       <Modal aberto={!!fin} fechar={() => setFin(null)} titulo="Finalizar esta carga">
         {fin && (() => {
           const pend = S.paradas.filter((p) => p.romaneioId === fin && p.status === 'pendente');
