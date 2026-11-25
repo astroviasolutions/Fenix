@@ -65,6 +65,8 @@ export const act = {
     }
     return { ...s, romaneios: [...s.romaneios, ...romaneios], paradas: [...s.paradas, ...paradas] };
   }),
+  /* distribuição: passa várias paradas de uma vez para um motorista (ou tira o motorista com null) */
+  atribuir: (ids, motoristaId) => setState((s) => { const set = new Set(ids); return { ...s, paradas: s.paradas.map((p) => (set.has(p.id) ? { ...p, motoristaId: motoristaId || null } : p)) }; }),
   /* bipagem: confere o pacote na carga do motorista (e o atribui a ele se ainda não tinha dono) */
   bipar: (codigo, motoristaId) => {
     const cod = String(codigo).trim().toLowerCase();

@@ -4,6 +4,7 @@ import { lerArquivo } from '../leitor/index.js';
 import { dataBR, hoje, norm, num } from '../lib.js';
 import { act, useStore } from '../store.js';
 import { Chips, Icon, Vazio } from '../ui.jsx';
+import Rotas from './Rotas.jsx';
 
 const FONTES = { tabela: 'Tabela em PDF', blocos: 'Fichas por entrega', ctrc: 'Romaneio de transportadora', planilha: 'Planilha' };
 const chaveServico = (r) => String(r.servico || r.tipo || '').toUpperCase();
@@ -42,17 +43,18 @@ export default function Romaneio() {
   const [arrastando, setArrastando] = useState(false);
   const [novaEmp, setNovaEmp] = useState('');
   const [aba, setAba] = useState('arquivo');
+  const [resp, setResp] = useState(null);       // resposta sobre o motorista do documento: 'doc' | 'outro' | 'depois'
   const inp = useRef(null);
   const emp = padrao || S.empresas[0]?.id || '';
 
   async function receber(file) {
-    setErro(''); setLeitura(null);
+    setErro(''); setLeitura(null); setResp(null);
     if (!file) return;
     setBusy(true);
     try {
       const r = await lerArquivo(file);
       setLeitura({ ...r, arquivo: file.name });
-      setMot(acharMotorista(S, r.motoristaDoc));
+      setMot('');
       /* serviços diferentes (ex.: cartão) já tentam cair no parceiro de mesmo nome */
       const m = {};
       for (const v of new Set(r.registros.map(chaveServico).filter(Boolean))) {
@@ -85,8 +87,14 @@ export default function Romaneio() {
     return { grupos, pacotes: grupos.reduce((t, g) => t + g.pacotes, 0), paradas: grupos.reduce((t, g) => t + g.paradas.length, 0), repetidos: grupos.reduce((t, g) => t + g.repetidos, 0) };
   }, [leitura, alvo, emp, jaTem, dividido]);
 
+  const docNome = leitura?.motoristaDoc ? leitura.motoristaDoc.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase()) : '';
+  const docId = leitura?.motoristaDoc ? acharMotorista(S, leitura.motoristaDoc) : '';
+  const pendente = !!leitura?.motoristaDoc && resp === null;   // o dono precisa responder antes de importar
   const confirmar = () => {
-    act.importar({ data, arquivo: leitura.arquivo, motoristaId: mot || null, grupos: resumo.grupos.filter((g) => g.paradas.length).map((g) => ({ empresaId: g.empresaId, paradas: g.paradas })) });
+    let motoristaId = resp === 'doc' ? docId : resp === 'outro' ? mot : '';
+    if (resp === 'doc' && !docId) motoristaId = act.add('motoristas', { nome: docNome, tipo: 'pacote', valor: 0, ativo: true });
+    if (!leitura.motoristaDoc) motoristaId = mot;
+    act.importar({ data, arquivo: leitura.arquivo, motoristaId: motoristaId || null, grupos: resumo.grupos.filter((g) => g.paradas.length).map((g) => ({ empresaId: g.empresaId, paradas: g.paradas })) });
     setLeitura(null);
   };
 
@@ -98,11 +106,6 @@ export default function Romaneio() {
     setM({ ...m, codigo: '', endereco: '', cliente: '' }); setOk('Parada lançada.'); setTimeout(() => setOk(''), 2500);
   };
 
-  const semMot = useMemo(() => {
-    const x = {};
-    for (const p of S.paradas) if (!p.motoristaId && p.status === 'pendente') x[p.cidade || 'Sem cidade'] = (x[p.cidade || 'Sem cidade'] || 0) + 1;
-    return Object.entries(x).sort((a, b) => b[1] - a[1]);
-  }, [S.paradas]);
   const romaneios = useMemo(() => [...S.romaneios].sort((a, b) => b.data.localeCompare(a.data)), [S.romaneios]);
 
   return (
@@ -161,10 +164,22 @@ export default function Romaneio() {
           </div>
           {leitura.avisos?.map((a) => <p key={a} className="small warn" style={{ marginTop: 10 }}>⚠ {a}</p>)}
 
-          <div className="form" style={{ marginTop: 14 }}>
-            <label className="f">Motorista desta carga{leitura.motoristaDoc ? ` (no documento: ${leitura.motoristaDoc})` : ''}
-              <select className="sel" value={mot} onChange={(e) => setMot(e.target.value)}><option value="">Distribuir depois</option>{S.motoristas.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
-          </div>
+          {leitura.motoristaDoc ? (
+            <div className="card" style={{ background: 'var(--surface2)', marginTop: 14, padding: 16 }}>
+              <p><b>Este romaneio vem em nome de {docNome}.</b> {docId ? 'Seguir com esse motorista?' : 'Ele ainda não está cadastrado. Seguir com ele?'}</p>
+              <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+                <button className={`btn ${resp === 'doc' ? 'ac' : ''}`} onClick={() => setResp('doc')}>{docId ? `Sim, seguir com ${docNome.split(' ')[0]}` : `Cadastrar ${docNome.split(' ')[0]} e seguir`}</button>
+                <button className={`btn ${resp === 'outro' ? 'ac' : ''}`} onClick={() => setResp('outro')}>Escolher outro motorista</button>
+                <button className={`btn ${resp === 'depois' ? 'ac' : ''}`} onClick={() => setResp('depois')}>Distribuir depois</button>
+              </div>
+              {resp === 'outro' && <label className="f" style={{ marginTop: 10 }}>Motorista<select className="sel" value={mot} onChange={(e) => setMot(e.target.value)}><option value="">Escolher…</option>{S.motoristas.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>}
+            </div>
+          ) : (
+            <div className="form" style={{ marginTop: 14 }}>
+              <label className="f">Motorista desta carga
+                <select className="sel" value={mot} onChange={(e) => setMot(e.target.value)}><option value="">Distribuir depois</option>{S.motoristas.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select></label>
+            </div>
+          )}
 
           {dividido && (
             <div style={{ marginTop: 14 }}>
@@ -194,9 +209,11 @@ export default function Romaneio() {
               {leitura.registros.slice(0, 8).map((r, i) => <tr key={i}><td>{r.codigo}</td><td>{r.cliente}</td><td>{r.endereco}</td><td>{r.cidade}</td></tr>)}
             </tbody></table></div>
           </details>
-          <div className="row" style={{ marginTop: 16 }}><button className="btn dark" disabled={!resumo.pacotes} onClick={confirmar}><Icon n="check" size={18} /> Importar {num(resumo.pacotes)} pacotes</button><button className="btn" onClick={() => setLeitura(null)}>Cancelar</button></div>
+          <div className="row" style={{ marginTop: 16 }}><button className="btn dark" disabled={!resumo.pacotes || pendente || (resp === 'outro' && !mot)} title={pendente ? 'Responda sobre o motorista acima' : ''} onClick={confirmar}><Icon n="check" size={18} /> Importar {num(resumo.pacotes)} pacotes</button><button className="btn" onClick={() => setLeitura(null)}>Cancelar</button></div>
         </div>
       )}
+
+      <Rotas />
 
       <div className="grid g2">
         <div className="card">
@@ -207,18 +224,6 @@ export default function Romaneio() {
             <div className="item"><span><b>Confere o total.</b> Se o documento diz 106 e o leitor achou 101, avisa antes de importar.</span></div>
             <div className="item"><span><b>Junta pelo mesmo endereço</b> e ignora pacotes repetidos.</span></div>
           </div>
-        </div>
-        <div className="card">
-          <h2>Distribuir rotas</h2>
-          <p className="sub">Paradas pendentes sem motorista, por cidade.</p>
-          {!semMot.length ? <p className="muted">Nenhuma parada sem motorista.</p> : semMot.map(([c, n]) => (
-            <div className="item" key={c}>
-              <span><b>{c}</b> <span className="muted">· {n} parada(s)</span></span>
-              <select className="sel" style={{ width: 190 }} defaultValue="" onChange={(e) => e.target.value && act.distribuir(c, e.target.value)} aria-label={`Motorista para ${c}`}>
-                <option value="">Escolher motorista…</option>{S.motoristas.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
-              </select>
-            </div>
-          ))}
         </div>
       </div>
 

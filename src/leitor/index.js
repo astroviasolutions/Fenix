@@ -1,6 +1,7 @@
 import { norm } from './campos.js';
 import { lerBlocos } from './blocos.js';
 import { lerCtrc } from './ctrc.js';
+import { lerCte } from './cte.js';
 import { linhasDaPlanilha, lerPlanilha } from './planilha.js';
 import { paginasDoArquivo } from './pdf.js';
 import { lerTabelaPdf } from './tabela.js';
@@ -38,11 +39,18 @@ export function lerPaginas(paginas, mapaManual = null) {
   const tab = lerTabelaPdf(paginas, mapaManual); if (tab) cand.push({ fonte: 'tabela', ...tab, assinatura: 'tabela:' + tab.colunas.map((c) => norm(c.rotulo)).join('|') });
   const blo = lerBlocos(paginas); if (blo) cand.push({ fonte: 'blocos', ...blo });
   cand.sort((a, b) => b.registros.filter(completo).length - a.registros.filter(completo).length);
-  const r = cand[0];
+  let r = cand[0];
+  /* manifesto + conhecimentos (CT-e) no fim do mesmo PDF: junta os B2B ao que a tabela trouxe */
+  const cte = lerCte(paginas);
+  if (cte && !r) r = { fonte: 'cte', registros: cte, colunas: [], assinatura: 'cte' };
+  else if (cte && r.fonte === 'tabela') {
+    const tem = new Set(r.registros.map((x) => String(x.codigo).toLowerCase()));
+    r = { ...r, fonte: 'tabela', registros: [...r.registros, ...cte.filter((x) => !tem.has(String(x.codigo).toLowerCase()))], comCte: new Set(cte.map((x) => x.codigo)).size };
+  }
   if (!r) return null;
   const esperado = acharTotal(paginas);
   const avisos = [];
-  const lidos = r.registros.filter((x) => x.codigo).length;
+  const lidos = new Set(r.registros.map((x) => x.codigo).filter(Boolean)).size;
   if (esperado != null && esperado !== lidos) avisos.push(`O documento informa ${esperado} no total, mas li ${lidos}. ${lidos < esperado ? `Faltam ${esperado - lidos}: confira se há itens em outra página ou outro formato (ex.: B2B).` : 'Sobrou: confira duplicados.'}`);
   const semEnd = r.registros.filter((x) => x.codigo && !x.endereco).length;
   if (semEnd) avisos.push(`${semEnd} pacote(s) sem endereço legível.`);

@@ -254,3 +254,7 @@ label.f { display: grid; gap: 6px; font-size: 13px; color: var(--tx2); }
 .tag.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
 
 .card.dest { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac), 0 20px 60px color-mix(in srgb, var(--ac) 16%, transparent); }
+
+/* ---------- distribuição de rotas ---------- */
+.rota { background: var(--surface2); border-radius: 20px; padding: 14px; margin-top: 10px; }
+.rota input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--ac); }

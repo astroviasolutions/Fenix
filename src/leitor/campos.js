@@ -69,6 +69,9 @@ export function desmembraEndereco(txt) {
     const resto = p.slice(3, cep ? -1 : undefined).join(', ');
     return { cidade: p[1], bairro: p[2], endereco: resto, cep };
   }
+  /* "Rua X, 1098 / Centro" (Total Express): o que vem depois da barra é o bairro */
+  const b = t.match(/^(.+?)\s+\/\s+([^/]+)$/);
+  if (b) return { endereco: b[1].trim(), bairro: b[2].trim(), cep: cepFmt(t) };
   return { endereco: t, cep: cepFmt(t) };
 }
 
