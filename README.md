@@ -54,3 +54,7 @@ Parceiro com layout novo: se o leitor não reconhecer, a prévia mostra as colun
 - **Fixas**: cobradas na 1ª quinzena, como na planilha.
 - **Total Express B2B**: o PDF informa 106 e a tabela traz 101; os 5 B2B estão em outras páginas (CT-e). O leitor avisa a diferença, mas ainda não lê essas páginas.
 - Logo: o arquivo em `public/logo-*.webp` foi recortado de uma foto de tela. Trocar pelo original em alta.
+
+## Teste
+
+Projeto Vercel `fenix-gestao`. Cada push na branch gera um preview (protegido por login Vercel). Abra a tela de login e use "Entrar com dados fictícios".
